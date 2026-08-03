@@ -69,7 +69,7 @@ class ParticipantController extends Controller
     public function participate(string $code)
     {
         $live = LiveSession::where('code', $code)->with('activeSlide.activities')->firstOrFail();
-        $participant = Participant::where('token', session('participant_token'))->where('live_session_id', $live->id)->first();
+        $participant = Participant::where('token', session('participant_token'))->where('live_session_id', $live->id)->with('responses')->first();
         if (! $participant) {
             return redirect('/')->withErrors(['code' => 'Vuelve a ingresar tu nombre para participar.']);
         }

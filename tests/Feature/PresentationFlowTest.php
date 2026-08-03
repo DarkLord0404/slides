@@ -1,7 +1,7 @@
 <?php
 namespace Tests\Feature;
 
-use App\Models\{Activity,LiveSession,Participant,Presentation,Slide,User};
+use App\Models\{Activity,LiveSession,Participant,Presentation,Response,Slide,User};
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -148,5 +148,17 @@ class PresentationFlowTest extends TestCase
   $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Inicio']);
   $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'445566','status'=>'live']);
   $this->actingAs($user)->get('/sesiones/'.$live->id)->assertOk()->assertSee('Salir de presentación')->assertDontSee('Cerrar sesión');
+ }
+
+ public function test_audience_keeps_its_answer_visibly_selected():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Votación']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Pregunta']);
+  $activity=Activity::create(['slide_id'=>$slide->id,'type'=>'multiple_choice','question'=>'¿Cuál?','options'=>['Uno','Dos']]);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'active_activity_id'=>$activity->id,'code'=>'778899','status'=>'live']);
+  $participant=$live->participants()->create(['token'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Ana','last_seen_at'=>now()]);
+  Response::create(['activity_id'=>$activity->id,'participant_id'=>$participant->id,'answer'=>'Dos']);
+  $this->withSession(['participant_token'=>$participant->token])->get('/participar/778899')->assertOk()->assertSee('✓ RESPONDIDA')->assertSee('✓ Tu respuesta')->assertSee('Actualizar respuesta')->assertSee('value="Dos" checked',false);
  }
 }
