@@ -73,4 +73,13 @@ class PresentationFlowTest extends TestCase
   $this->assertDatabaseHas('live_sessions',['id'=>$live->id,'active_slide_id'=>$second->id]);
   $this->get('/estado/777888')->assertOk()->assertJson(['active_slide_id'=>$second->id]);
  }
+
+ public function test_presenter_stage_marks_long_content_for_visual_clamping():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Contenido extenso']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Resumen','body'=>str_repeat('Contenido ',100)]);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'991122','status'=>'live']);
+  $this->actingAs($user)->get('/sesiones/'.$live->id)->assertOk()->assertSee('stage-content is-long',false);
+ }
 }

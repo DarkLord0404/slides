@@ -10,9 +10,9 @@
     @endunless
     <section class="stage-wrap"><div class="presentation-stage">
         @foreach($slides as $index => $slide)
-        <article class="stage-slide {{ $index === $activeIndex ? 'is-active' : '' }}" data-slide-id="{{ $slide->id }}">
+        <article class="stage-slide {{ $index === $activeIndex ? 'is-active' : '' }} {{ $slide->activities->isNotEmpty() ? 'has-question' : '' }}" data-slide-id="{{ $slide->id }}">
             <div class="stage-accent"></div><span class="stage-kicker">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }} / {{ str_pad($slides->count(), 2, '0', STR_PAD_LEFT) }}</span>
-            <div class="stage-content"><h1>{{ $slide->title ?: 'Sin título' }}</h1>@if($slide->body)<p>{{ $slide->body }}</p>@endif</div>
+            <div class="stage-content {{ mb_strlen($slide->body ?? '') > 700 ? 'is-long' : '' }}"><h1>{{ $slide->title ?: 'Sin título' }}</h1>@if($slide->body)<p>{{ $slide->body }}</p>@endif</div>
             @foreach($slide->activities as $activity)
             <div class="stage-question"><small>{{ ['multiple_choice'=>'ENCUESTA','open_text'=>'RESPUESTA ABIERTA','word_cloud'=>'NUBE DE PALABRAS','true_false'=>'VERDADERO O FALSO'][$activity->type] }}</small><h2>{{ $activity->question }}</h2>
                 @if(in_array($activity->type,['multiple_choice','true_false']))<div class="stage-bars">@foreach($activity->options ?? [] as $option)@php($count=$activity->responses->where('answer',$option)->count()) @php($total=max(1,$activity->responses->count()))<div><span style="--value:{{ round($count/$total*100) }}%"><i>{{ $option }}</i></span><b>{{ $count }}</b></div>@endforeach</div>
