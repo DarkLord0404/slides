@@ -22,4 +22,9 @@ class Slide extends Model
     {
         return $this->hasMany(Activity::class);
     }
+
+    public function reactions()
+    {
+        return $this->hasMany(SlideReaction::class);
+    }
 }

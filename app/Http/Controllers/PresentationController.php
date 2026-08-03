@@ -19,7 +19,7 @@ class PresentationController extends Controller
 
     public function index()
     {
-        return view('presentations.index', ['presentations' => auth()->user()->presentations()->withCount('slides')->latest()->get()]);
+        return view('presentations.index', ['presentations' => auth()->user()->presentations()->with('slides.activities.responses')->withCount(['slides', 'sessions'])->latest()->get()]);
     }
 
     public function store(Request $request)
@@ -37,6 +37,14 @@ class PresentationController extends Controller
         $presentation->load('slides.activities');
 
         return view('presentations.edit', compact('presentation'));
+    }
+
+    public function updatePresentation(Request $request, Presentation $presentation)
+    {
+        $this->owned($presentation);
+        $presentation->update($request->validate(['title' => ['required', 'string', 'max:150'], 'description' => ['nullable', 'string', 'max:1000']]));
+
+        return back()->with('ok', 'Información de la presentación actualizada.');
     }
 
     public function addSlide(Request $request, Presentation $presentation)
@@ -180,7 +188,7 @@ class PresentationController extends Controller
     public function showSession(LiveSession $session)
     {
         $this->owned($session->presentation);
-        $session->load('presentation.slides.activities.responses', 'participants');
+        $session->load('presentation.slides.activities.responses', 'presentation.slides.reactions', 'participants');
 
         return view('sessions.show', compact('session'));
     }

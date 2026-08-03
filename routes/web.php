@@ -16,6 +16,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/presentaciones', [PresentationController::class, 'index'])->name('presentations.index');
     Route::post('/presentaciones', [PresentationController::class, 'store'])->name('presentations.store');
     Route::get('/presentaciones/{presentation}/editar', [PresentationController::class, 'edit'])->name('presentations.edit');
+    Route::put('/presentaciones/{presentation}', [PresentationController::class, 'updatePresentation'])->name('presentations.update');
     Route::post('/presentaciones/{presentation}/diapositivas', [PresentationController::class, 'addSlide'])->name('slides.store');
     Route::put('/presentaciones/{presentation}/diapositivas/orden', [PresentationController::class, 'reorderSlides'])->name('slides.reorder');
     Route::put('/diapositivas/{slide}', [PresentationController::class, 'updateSlide'])->name('slides.update');
@@ -36,3 +37,4 @@ Route::get('/qr/{session:code}.svg', [ParticipantController::class, 'qr'])->name
 Route::get('/estado/{code}', [ParticipantController::class, 'state'])->whereNumber('code')->name('session.state');
 Route::get('/participar/{code}', [ParticipantController::class, 'participate'])->name('participate');
 Route::post('/actividades/{activity}/responder', [ParticipantController::class, 'answer'])->name('answer');
+Route::post('/diapositivas/{slide}/reaccionar', [ParticipantController::class, 'react'])->name('slides.react');

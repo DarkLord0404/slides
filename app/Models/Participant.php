@@ -22,4 +22,9 @@ class Participant extends Model
     {
         return $this->hasMany(Response::class);
     }
+
+    public function reactions()
+    {
+        return $this->hasMany(SlideReaction::class);
+    }
 }

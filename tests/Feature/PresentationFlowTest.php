@@ -195,4 +195,26 @@ class PresentationFlowTest extends TestCase
   $this->actingAs($user)->delete('/actividades/'.$activity->id)->assertRedirect();
   $this->assertDatabaseMissing('activities',['id'=>$activity->id]);
  }
+
+ public function test_creator_can_edit_presentation_metadata_and_dashboard_has_metrics():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Antes']);
+  Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Portada']);
+  $this->actingAs($user)->put('/presentaciones/'.$presentation->id,['title'=>'Después','description'=>'Descripción editable'])->assertRedirect();
+  $this->actingAs($user)->get('/presentaciones')->assertOk()->assertSee('Descripción editable')->assertSee('presentaciones')->assertSee('respuestas');
+ }
+
+ public function test_participant_can_like_the_active_slide_once():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Likes']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'991122','status'=>'live']);
+  $participant=$live->participants()->create(['token'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Luz','last_seen_at'=>now()]);
+  $this->withSession(['participant_token'=>$participant->token])->post('/diapositivas/'.$slide->id.'/reaccionar')->assertRedirect();
+  $this->withSession(['participant_token'=>$participant->token])->post('/diapositivas/'.$slide->id.'/reaccionar')->assertRedirect();
+  $this->assertDatabaseCount('slide_reactions',1);
+  $this->get('/estado/991122')->assertOk()->assertJson(['likes'=>1]);
+ }
 }

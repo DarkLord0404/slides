@@ -6,6 +6,8 @@ use App\Models\Activity;
 use App\Models\LiveSession;
 use App\Models\Participant;
 use App\Models\Response;
+use App\Models\Slide;
+use App\Models\SlideReaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Endroid\QrCode\QrCode;
@@ -50,6 +52,7 @@ class ParticipantController extends Controller
             'active_activity_id' => $live->active_activity_id,
             'status' => $live->status,
             'participants' => $live->participants()->where('last_seen_at', '>=', now()->subMinute())->count(),
+            'likes' => $live->active_slide_id ? SlideReaction::where('live_session_id', $live->id)->where('slide_id', $live->active_slide_id)->where('type', 'like')->count() : 0,
         ]);
     }
 
@@ -69,7 +72,7 @@ class ParticipantController extends Controller
     public function participate(string $code)
     {
         $live = LiveSession::where('code', $code)->with('activeSlide.activities')->firstOrFail();
-        $participant = Participant::where('token', session('participant_token'))->where('live_session_id', $live->id)->with('responses')->first();
+        $participant = Participant::where('token', session('participant_token'))->where('live_session_id', $live->id)->with('responses', 'reactions')->first();
         if (! $participant) {
             return redirect('/')->withErrors(['code' => 'Vuelve a ingresar tu nombre para participar.']);
         }
@@ -90,5 +93,14 @@ class ParticipantController extends Controller
         Response::updateOrCreate(['activity_id' => $activity->id, 'participant_id' => $participant->id], ['answer' => $data['answer']]);
 
         return back()->with('answered', '¡Respuesta registrada!');
+    }
+
+    public function react(Slide $slide)
+    {
+        $participant = Participant::where('token', session('participant_token'))->with('session')->firstOrFail();
+        abort_unless($participant->session->status === 'live' && $participant->session->active_slide_id === $slide->id && $slide->presentation_id === $participant->session->presentation_id, 403);
+        SlideReaction::firstOrCreate(['live_session_id' => $participant->live_session_id, 'participant_id' => $participant->id, 'slide_id' => $slide->id, 'type' => 'like']);
+
+        return back()->with('answered', '¡Te gusta esta diapositiva!');
     }
 }
