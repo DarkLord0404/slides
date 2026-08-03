@@ -7,6 +7,7 @@ use App\Models\LiveSession;
 use App\Models\Presentation;
 use App\Models\Slide;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class PresentationController extends Controller
 {
@@ -53,11 +54,32 @@ class PresentationController extends Controller
             'title' => ['nullable', 'string', 'max:120'],
             'body' => ['nullable', 'string', 'max:900'],
             'layout' => ['nullable', 'in:cover,content,split,question'],
+            'background_style' => ['nullable', 'in:ivory,ocean,sunset,forest,night,custom'],
+            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_background_image' => ['nullable', 'boolean'],
         ]);
+        $backgroundPath = $slide->background_path;
+        if ($request->boolean('remove_background_image') && $backgroundPath) {
+            Storage::disk('public')->delete($backgroundPath);
+            $backgroundPath = null;
+        }
+        if ($request->hasFile('background_image')) {
+            if ($backgroundPath) {
+                Storage::disk('public')->delete($backgroundPath);
+            }
+            $backgroundPath = $request->file('background_image')->store('slide-backgrounds', 'public');
+        }
         $slide->update([
             'title' => $data['title'] ?? null,
             'body' => $data['body'] ?? null,
-            'design' => ['layout' => $data['layout'] ?? 'content'],
+            'background_path' => $backgroundPath,
+            'design' => [
+                ...($slide->design ?? []),
+                'layout' => $data['layout'] ?? 'content',
+                'background_style' => $data['background_style'] ?? 'ivory',
+                'background_color' => $data['background_color'] ?? '#fffdf8',
+            ],
         ]);
 
         return back()->with('ok', 'Diapositiva guardada.');

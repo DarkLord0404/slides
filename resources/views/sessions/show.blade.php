@@ -14,7 +14,9 @@
         @foreach($slides as $index => $slide)
         @php($layout = data_get($slide->design, 'layout', $slide->activities->isNotEmpty() ? 'question' : 'content'))
         @php($initialActivityId = $slide->id === $session->active_slide_id ? $session->active_activity_id : null)
-        <article class="stage-slide layout-{{ $layout }} {{ $index === $activeIndex ? 'is-active' : '' }} {{ $slide->activities->isNotEmpty() ? 'has-question' : '' }}" data-slide-id="{{ $slide->id }}">
+        @php($backgroundStyle = data_get($slide->design, 'background_style', 'ivory'))
+        @php($backgroundImage = $slide->background_path ? asset('storage/'.$slide->background_path) : null)
+        <article class="stage-slide layout-{{ $layout }} background-{{ $backgroundStyle }} {{ $backgroundImage ? 'has-background-image' : '' }} {{ $index === $activeIndex ? 'is-active' : '' }} {{ $slide->activities->isNotEmpty() ? 'has-question' : '' }}" style="--slide-color:{{ data_get($slide->design, 'background_color', '#fffdf8') }};{{ $backgroundImage ? "--slide-image:url('".$backgroundImage."')" : '' }}" data-slide-id="{{ $slide->id }}">
             <div class="stage-accent"></div><span class="stage-kicker">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }} / {{ str_pad($slides->count(), 2, '0', STR_PAD_LEFT) }}</span>
             <div class="stage-content {{ mb_strlen($slide->body ?? '') > 700 ? 'is-long' : '' }}"><h1>{{ $slide->title ?: 'Sin título' }}</h1>@if($slide->body)<p>{{ $slide->body }}</p>@endif</div>
             @foreach($slide->activities as $activity)<div class="stage-question {{ $activity->id === $initialActivityId ? 'is-active' : '' }}" data-activity-id="{{ $activity->id }}"><small>{{ ['multiple_choice'=>'ENCUESTA','open_text'=>'RESPUESTA ABIERTA','word_cloud'=>'NUBE DE PALABRAS','true_false'=>'VERDADERO O FALSO'][$activity->type] }}</small><h2>{{ $activity->question }}</h2>

@@ -130,4 +130,14 @@ class PresentationFlowTest extends TestCase
   $this->assertDatabaseHas('activities',['id'=>$activity->id,'type'=>'multiple_choice','question'=>'Actualizada']);
   $this->assertSame(['Uno','Dos'],$activity->fresh()->options);
  }
+
+ public function test_creator_can_customize_a_slide_background():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Fondos']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>'Tema','body'=>'Contenido','layout'=>'cover','background_style'=>'custom','background_color'=>'#123456'])->assertRedirect();
+  $this->assertSame('custom',data_get($slide->fresh()->design,'background_style'));
+  $this->assertSame('#123456',data_get($slide->fresh()->design,'background_color'));
+ }
 }
