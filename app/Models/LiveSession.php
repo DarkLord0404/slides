@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class LiveSession extends Model
 {
-    protected $fillable = ['presentation_id', 'active_slide_id', 'code', 'status', 'started_at', 'ended_at'];
+    protected $fillable = ['presentation_id', 'active_slide_id', 'active_activity_id', 'code', 'status', 'started_at', 'ended_at'];
 
     protected function casts(): array
     {
@@ -21,6 +21,11 @@ class LiveSession extends Model
     public function activeSlide()
     {
         return $this->belongsTo(Slide::class, 'active_slide_id');
+    }
+
+    public function activeActivity()
+    {
+        return $this->belongsTo(Activity::class, 'active_activity_id');
     }
 
     public function participants()

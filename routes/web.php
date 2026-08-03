@@ -19,9 +19,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/presentaciones/{presentation}/diapositivas', [PresentationController::class, 'addSlide'])->name('slides.store');
     Route::put('/diapositivas/{slide}', [PresentationController::class, 'updateSlide'])->name('slides.update');
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
+    Route::put('/actividades/{activity}', [PresentationController::class, 'updateActivity'])->name('activities.update');
     Route::post('/presentaciones/{presentation}/iniciar', [PresentationController::class, 'start'])->name('presentations.start');
     Route::get('/sesiones/{session}', [PresentationController::class, 'showSession'])->name('sessions.show');
     Route::put('/sesiones/{session}/diapositiva', [PresentationController::class, 'changeSlide'])->name('sessions.slide');
+    Route::put('/sesiones/{session}/interaccion', [PresentationController::class, 'changeActivity'])->name('sessions.activity');
     Route::post('/sesiones/{session}/terminar', [PresentationController::class, 'endSession'])->name('sessions.end');
 });
 

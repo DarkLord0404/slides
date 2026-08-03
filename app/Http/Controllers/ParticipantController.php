@@ -47,6 +47,7 @@ class ParticipantController extends Controller
 
         return response()->json([
             'active_slide_id' => $live->active_slide_id,
+            'active_activity_id' => $live->active_activity_id,
             'status' => $live->status,
             'participants' => $live->participants()->where('last_seen_at', '>=', now()->subMinute())->count(),
         ]);

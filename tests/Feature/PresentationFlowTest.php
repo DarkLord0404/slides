@@ -104,4 +104,30 @@ class PresentationFlowTest extends TestCase
   $this->assertSame('split',data_get($slide->fresh()->design,'layout'));
   $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>str_repeat('T',121),'body'=>'Texto','layout'=>'content'])->assertSessionHasErrors('title');
  }
+
+ public function test_presenter_selects_one_active_interaction_at_a_time():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Secuencia']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Mensaje']);
+  $first=Activity::create(['slide_id'=>$slide->id,'type'=>'open_text','question'=>'Primera']);
+  $second=Activity::create(['slide_id'=>$slide->id,'type'=>'open_text','question'=>'Segunda']);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'112233','status'=>'live']);
+  $participant=$live->participants()->create(['token'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Lin','last_seen_at'=>now()]);
+
+  $this->actingAs($user)->putJson('/sesiones/'.$live->id.'/interaccion',['activity_id'=>$second->id])->assertOk()->assertJson(['active_activity_id'=>$second->id]);
+  $this->withSession(['participant_token'=>$participant->token])->get('/participar/112233')->assertOk()->assertSee('Segunda')->assertDontSee('Primera');
+  $this->actingAs($user)->putJson('/sesiones/'.$live->id.'/interaccion',['activity_id'=>$first->id])->assertOk();
+ }
+
+ public function test_creator_can_edit_an_existing_interaction():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Edición']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $activity=Activity::create(['slide_id'=>$slide->id,'type'=>'open_text','question'=>'Original']);
+  $this->actingAs($user)->put('/actividades/'.$activity->id,['type'=>'multiple_choice','question'=>'Actualizada','options_text'=>"Uno\nDos"])->assertRedirect();
+  $this->assertDatabaseHas('activities',['id'=>$activity->id,'type'=>'multiple_choice','question'=>'Actualizada']);
+  $this->assertSame(['Uno','Dos'],$activity->fresh()->options);
+ }
 }
