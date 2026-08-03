@@ -40,6 +40,16 @@ class PresentationFlowTest extends TestCase
   $this->assertDatabaseHas('responses',['answer'=>'Muy útil']);
  }
 
+ public function test_audience_can_open_direct_link_and_qr_without_account():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Demo']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'654321','status'=>'live']);
+  $this->get('/j/654321')->assertOk()->assertSee('No necesitas registrarte')->assertSee('654321');
+  $this->get('/qr/654321.svg')->assertOk()->assertHeader('Content-Type','image/svg+xml');
+ }
+
  public function test_creator_cannot_edit_another_presentation():void
  {
   $owner=User::factory()->create();$intruder=User::factory()->create();

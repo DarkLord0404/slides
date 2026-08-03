@@ -8,9 +8,33 @@ use App\Models\Participant;
 use App\Models\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\SvgWriter;
 
 class ParticipantController extends Controller
 {
+    public function joinPage(string $code)
+    {
+        $live = LiveSession::where('code', $code)->where('status', 'live')->with('presentation')->firstOrFail();
+
+        return view('sessions.join', compact('live'));
+    }
+
+    public function qr(LiveSession $session)
+    {
+        abort_unless($session->status === 'live', 404);
+        $result = (new SvgWriter)->write(new QrCode(
+            data: route('join.show', $session->code),
+            size: 360,
+            margin: 12,
+        ));
+
+        return response($result->getString(), 200, [
+            'Content-Type' => $result->getMimeType(),
+            'Cache-Control' => 'public, max-age=300',
+        ]);
+    }
+
     public function join(Request $request)
     {
         $data = $request->validate(['code' => ['required', 'digits:6'], 'name' => ['required', 'string', 'max:80']]);

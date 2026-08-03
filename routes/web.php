@@ -24,5 +24,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::post('/unirse', [ParticipantController::class, 'join'])->name('join');
+Route::get('/j/{code}', [ParticipantController::class, 'joinPage'])->whereNumber('code')->name('join.show');
+Route::get('/qr/{session:code}.svg', [ParticipantController::class, 'qr'])->name('session.qr');
 Route::get('/participar/{code}', [ParticipantController::class, 'participate'])->name('participate');
 Route::post('/actividades/{activity}/responder', [ParticipantController::class, 'answer'])->name('answer');

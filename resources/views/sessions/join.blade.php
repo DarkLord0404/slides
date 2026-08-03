@@ -1,0 +1,3 @@
+<x-layouts.app :title="'Entrar a '.$live->presentation->title">
+<section class="join-session"><div class="join-session-card"><span class="live"><i></i> SESIÓN EN VIVO</span><div class="mini-code">{{ $live->code }}</div><h1>{{ $live->presentation->title }}</h1><p>No necesitas registrarte. Elige el nombre o alias que verá el presentador.</p><form method="post" action="{{ route('join') }}">@csrf<input type="hidden" name="code" value="{{ $live->code }}"><label>Tu nombre o alias<input name="name" maxlength="80" placeholder="Ej. Alexander" value="{{ old('name') }}" required autofocus autocomplete="nickname"></label><button class="btn">Entrar a la presentación</button></form><small>Al continuar, entrarás directamente como participante.</small></div></section>
+</x-layouts.app>
