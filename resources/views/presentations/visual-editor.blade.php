@@ -23,6 +23,14 @@ $editorData = [
             'design' => $slide->design ?? [],
             'background_url' => $slide->background_path ? asset('storage/'.$slide->background_path) : null,
             'save_url' => route('slides.canvas', $slide),
+            'activity_url' => route('activities.store', $slide),
+            'activities' => $slide->activities->map(fn ($activity) => [
+                'id' => $activity->id,
+                'type' => $activity->type,
+                'question' => $activity->question,
+                'options' => $activity->options ?? [],
+                'delete_url' => route('activities.destroy', $activity),
+            ])->values(),
         ];
     })->values(),
 ];
