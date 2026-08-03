@@ -223,7 +223,7 @@ class PresentationFlowTest extends TestCase
   $user=User::factory()->create();
   $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Lienzo libre']);
   $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Título existente','body'=>'Contenido existente']);
-  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/lienzo')->assertOk()->assertSee('visual-editor')->assertSee('Título existente')->assertSee('Contenido existente');
+  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/lienzo')->assertOk()->assertSee('visual-editor')->assertSee('legacy-title-'.$slide->id)->assertSee('legacy-body-'.$slide->id);
   $elements=[['id'=>'one','type'=>'text','x'=>10,'y'=>20,'width'=>300,'height'=>80,'rotation'=>0,'text'=>'Hola','fill'=>'#000000','fontSize'=>40]];
   $this->actingAs($user)->putJson('/diapositivas/'.$slide->id.'/lienzo',['elements'=>$elements])->assertOk();
   $this->assertSame('Hola',data_get($slide->fresh()->design,'elements.0.text'));
