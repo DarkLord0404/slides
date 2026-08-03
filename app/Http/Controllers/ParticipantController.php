@@ -15,7 +15,13 @@ class ParticipantController extends Controller
 {
     public function joinPage(string $code)
     {
-        $live = LiveSession::where('code', $code)->where('status', 'live')->with('presentation')->firstOrFail();
+        $live = LiveSession::where('code', $code)->where('status', 'live')->with('presentation')->first();
+
+        if (! $live) {
+            return redirect()->route('home')->withErrors([
+                'code' => 'Ese código no corresponde a una sesión activa. Revisa el número e inténtalo nuevamente.',
+            ]);
+        }
 
         return view('sessions.join', compact('live'));
     }

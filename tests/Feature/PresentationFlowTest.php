@@ -50,6 +50,11 @@ class PresentationFlowTest extends TestCase
   $this->get('/qr/654321.svg')->assertOk()->assertHeader('Content-Type','image/svg+xml');
  }
 
+ public function test_invalid_audience_code_returns_to_home_with_message():void
+ {
+  $this->get('/j/123456')->assertRedirect('/')->assertSessionHasErrors('code');
+ }
+
  public function test_creator_cannot_edit_another_presentation():void
  {
   $owner=User::factory()->create();$intruder=User::factory()->create();
