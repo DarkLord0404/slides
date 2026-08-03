@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/diapositivas/{slide}', [PresentationController::class, 'deleteSlide'])->name('slides.destroy');
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
     Route::put('/actividades/{activity}', [PresentationController::class, 'updateActivity'])->name('activities.update');
+    Route::delete('/actividades/{activity}', [PresentationController::class, 'deleteActivity'])->name('activities.destroy');
     Route::post('/presentaciones/{presentation}/iniciar', [PresentationController::class, 'start'])->name('presentations.start');
     Route::get('/sesiones/{session}', [PresentationController::class, 'showSession'])->name('sessions.show');
     Route::put('/sesiones/{session}/diapositiva', [PresentationController::class, 'changeSlide'])->name('sessions.slide');

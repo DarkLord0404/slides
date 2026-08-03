@@ -56,7 +56,14 @@ class PresentationController extends Controller
             'body' => ['nullable', 'string', 'max:900'],
             'layout' => ['nullable', 'in:cover,content,split,question'],
             'background_style' => ['nullable', 'in:ivory,ocean,sunset,forest,night,custom'],
+            'background_mode' => ['nullable', 'in:preset,custom'],
             'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'title_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'body_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'question_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'question_text_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'decoration' => ['nullable', 'in:circle,none'],
             'background_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'remove_background_image' => ['nullable', 'boolean'],
         ]);
@@ -79,7 +86,14 @@ class PresentationController extends Controller
                 ...($slide->design ?? []),
                 'layout' => $data['layout'] ?? 'content',
                 'background_style' => $data['background_style'] ?? 'ivory',
+                'background_mode' => $data['background_mode'] ?? 'preset',
                 'background_color' => $data['background_color'] ?? '#fffdf8',
+                'title_color' => $data['title_color'] ?? '#102a2e',
+                'body_color' => $data['body_color'] ?? '#536568',
+                'accent_color' => $data['accent_color'] ?? '#ff6846',
+                'question_background_color' => $data['question_background_color'] ?? '#102a2e',
+                'question_text_color' => $data['question_text_color'] ?? '#ffffff',
+                'decoration' => $data['decoration'] ?? 'circle',
             ],
         ]);
 
@@ -140,6 +154,14 @@ class PresentationController extends Controller
         $activity->update(['type' => $data['type'], 'question' => $data['question'], 'options' => $options]);
 
         return back()->with('ok', 'Interacción actualizada.');
+    }
+
+    public function deleteActivity(Activity $activity)
+    {
+        $this->owned($activity->slide->presentation);
+        $activity->delete();
+
+        return back()->with('ok', 'Interacción eliminada.');
     }
 
     public function start(Presentation $presentation)

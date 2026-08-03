@@ -136,9 +136,11 @@ class PresentationFlowTest extends TestCase
   $user=User::factory()->create();
   $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Fondos']);
   $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
-  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>'Tema','body'=>'Contenido','layout'=>'cover','background_style'=>'custom','background_color'=>'#123456'])->assertRedirect();
+  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>'Tema','body'=>'Contenido','layout'=>'cover','background_style'=>'custom','background_mode'=>'custom','background_color'=>'#123456','title_color'=>'#ffffff','body_color'=>'#eeeeee','accent_color'=>'#ff0000','question_background_color'=>'#222222','question_text_color'=>'#fafafa','decoration'=>'none'])->assertRedirect();
   $this->assertSame('custom',data_get($slide->fresh()->design,'background_style'));
   $this->assertSame('#123456',data_get($slide->fresh()->design,'background_color'));
+  $this->assertSame('#ffffff',data_get($slide->fresh()->design,'title_color'));
+  $this->assertSame('none',data_get($slide->fresh()->design,'decoration'));
  }
 
  public function test_presentation_mode_exits_to_editor_without_logging_out():void
@@ -182,5 +184,15 @@ class PresentationFlowTest extends TestCase
   $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Editor']);
   Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Lienzo']);
   $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/editar')->assertOk()->assertSee('editor-canvas')->assertSee('Arrastra para reordenar');
+ }
+
+ public function test_creator_can_delete_an_interaction():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Limpiar']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $activity=Activity::create(['slide_id'=>$slide->id,'type'=>'open_text','question'=>'Eliminarme']);
+  $this->actingAs($user)->delete('/actividades/'.$activity->id)->assertRedirect();
+  $this->assertDatabaseMissing('activities',['id'=>$activity->id]);
  }
 }
