@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\LiveSession;
 use App\Models\Presentation;
 use App\Models\Slide;
