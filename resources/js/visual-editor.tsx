@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState}from'react';
 import{createRoot}from'react-dom/client';
 import{Stage,Layer,Rect,Text,Image as KImage,Transformer}from'react-konva';
 import'./visual-editor.css';
+import'./visual-theme.css';
 type El={id:string,type:'text'|'rect'|'image',x:number,y:number,width:number,height:number,rotation:number,text?:string,src?:string,fill?:string,fontSize?:number,fontFamily?:string,fontStyle?:string};
 type Slide={id:number,position:number,title:string,elements:El[],save_url:string};
 const uid=()=>crypto.randomUUID(),scale=.75;

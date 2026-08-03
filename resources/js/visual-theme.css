@@ -1,0 +1,5 @@
+.visual-theme{position:fixed;z-index:30;left:160px;top:10px;color:#102a2e;font-family:Arial}
+.visual-theme summary{cursor:pointer;background:#fffdf8;border:1px solid #d9d5ca;border-radius:8px;padding:8px 12px;list-style:none}
+.visual-theme form{position:absolute;top:42px;left:0;width:280px;padding:16px;background:#fffdf8;border:1px solid #d9d5ca;border-radius:12px;box-shadow:0 15px 40px #102a2e44;display:grid;gap:10px}
+.visual-theme label{display:grid;gap:4px;font-size:11px}.visual-theme select,.visual-theme input,.visual-theme button{width:100%;padding:8px;border:1px solid #d9d5ca;border-radius:7px}
+.visual-theme form>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}.visual-theme input[type=color]{height:38px;padding:3px}.visual-theme button{background:#007f7b;color:#fff;font-weight:700}

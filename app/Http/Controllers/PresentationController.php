@@ -51,7 +51,13 @@ class PresentationController extends Controller
     {
         $this->owned($slide->presentation);
         $data = $request->validate(['elements' => ['present', 'array', 'max:200']]);
-        $slide->update(['design' => [...($slide->design ?? []), 'elements' => $data['elements']]]);
+        $titleElement = collect($data['elements'])->firstWhere('id', 'legacy-title-'.$slide->id);
+        $bodyElement = collect($data['elements'])->firstWhere('id', 'legacy-body-'.$slide->id);
+        $slide->update([
+            'title' => $titleElement['text'] ?? $slide->title,
+            'body' => $bodyElement['text'] ?? $slide->body,
+            'design' => [...($slide->design ?? []), 'elements' => $data['elements']],
+        ]);
 
         return response()->json(['saved' => true, 'saved_at' => now()->toIso8601String()]);
     }
@@ -103,6 +109,18 @@ class PresentationController extends Controller
             }
             $backgroundPath = $request->file('background_image')->store('slide-backgrounds', 'public');
         }
+        $elements = collect(data_get($slide->design, 'elements', []))->map(function ($element) use ($data, $slide) {
+            if (($element['id'] ?? null) === 'legacy-title-'.$slide->id) {
+                $element['text'] = $data['title'] ?? '';
+                $element['fill'] = $data['title_color'] ?? '#102a2e';
+            }
+            if (($element['id'] ?? null) === 'legacy-body-'.$slide->id) {
+                $element['text'] = $data['body'] ?? '';
+                $element['fill'] = $data['body_color'] ?? '#536568';
+            }
+
+            return $element;
+        })->values()->all();
         $slide->update([
             'title' => $data['title'] ?? null,
             'body' => $data['body'] ?? null,
@@ -119,10 +137,78 @@ class PresentationController extends Controller
                 'question_background_color' => $data['question_background_color'] ?? '#102a2e',
                 'question_text_color' => $data['question_text_color'] ?? '#ffffff',
                 'decoration' => $data['decoration'] ?? 'circle',
+                'elements' => $elements,
             ],
         ]);
 
         return back()->with('ok', 'Diapositiva guardada.');
+    }
+
+    public function updateTheme(Request $request, Presentation $presentation)
+    {
+        $this->owned($presentation);
+        $data = $request->validate([
+            'theme' => ['required', 'in:koqoi,minimal,ocean,sunset,forest,night,custom'],
+            'background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'title_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'body_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'decoration' => ['nullable', 'in:circle,none'],
+            'background_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'remove_background_image' => ['nullable', 'boolean'],
+        ]);
+        $presets = [
+            'koqoi' => ['background_style' => 'ivory', 'background_color' => '#fffdf8', 'title_color' => '#102a2e', 'body_color' => '#536568', 'accent_color' => '#ff6846', 'decoration' => 'circle'],
+            'minimal' => ['background_style' => 'custom', 'background_color' => '#ffffff', 'title_color' => '#171717', 'body_color' => '#525252', 'accent_color' => '#007f7b', 'decoration' => 'none'],
+            'ocean' => ['background_style' => 'ocean', 'background_color' => '#dff7f5', 'title_color' => '#073b4c', 'body_color' => '#275d66', 'accent_color' => '#06b6d4', 'decoration' => 'circle'],
+            'sunset' => ['background_style' => 'sunset', 'background_color' => '#fff0e6', 'title_color' => '#5b2133', 'body_color' => '#7a4050', 'accent_color' => '#f97346', 'decoration' => 'circle'],
+            'forest' => ['background_style' => 'forest', 'background_color' => '#eaf4e2', 'title_color' => '#173d2b', 'body_color' => '#41634f', 'accent_color' => '#72a276', 'decoration' => 'none'],
+            'night' => ['background_style' => 'night', 'background_color' => '#111827', 'title_color' => '#ffffff', 'body_color' => '#d1d5db', 'accent_color' => '#a78bfa', 'decoration' => 'circle'],
+        ];
+        $settings = $data['theme'] === 'custom'
+            ? ['background_style' => 'custom', 'background_color' => $data['background_color'] ?? '#fffdf8', 'title_color' => $data['title_color'] ?? '#102a2e', 'body_color' => $data['body_color'] ?? '#536568', 'accent_color' => $data['accent_color'] ?? '#ff6846', 'decoration' => $data['decoration'] ?? 'none']
+            : $presets[$data['theme']];
+        $imagePath = data_get($presentation->theme_settings, 'background_path');
+        if ($request->boolean('remove_background_image') && $imagePath) {
+            Storage::disk('public')->delete($imagePath);
+            $imagePath = null;
+        }
+        if ($request->hasFile('background_image')) {
+            if ($imagePath) {
+                Storage::disk('public')->delete($imagePath);
+            }
+            $imagePath = $request->file('background_image')->store('presentation-themes', 'public');
+        }
+        $settings['background_path'] = $imagePath;
+        DB::transaction(function () use ($presentation, $data, $settings) {
+            $presentation->update(['theme' => $data['theme'], 'theme_settings' => $settings]);
+            foreach ($presentation->slides as $slide) {
+                $elements = collect(data_get($slide->design, 'elements', []))->reject(fn ($element) => in_array($element['id'] ?? null, ['theme-background', 'theme-background-image'], true))->map(function ($element) use ($slide, $settings) {
+                    if (($element['id'] ?? null) === 'legacy-title-'.$slide->id) {
+                        $element['fill'] = $settings['title_color'];
+                    }
+                    if (($element['id'] ?? null) === 'legacy-body-'.$slide->id) {
+                        $element['fill'] = $settings['body_color'];
+                    }
+
+                    return $element;
+                });
+                $backgrounds = collect([['id' => 'theme-background', 'type' => 'rect', 'x' => 0, 'y' => 0, 'width' => 1280, 'height' => 720, 'rotation' => 0, 'fill' => $settings['background_color']]]);
+                if ($settings['background_path']) {
+                    $backgrounds->push(['id' => 'theme-background-image', 'type' => 'image', 'x' => 0, 'y' => 0, 'width' => 1280, 'height' => 720, 'rotation' => 0, 'src' => Storage::disk('public')->url($settings['background_path'])]);
+                }
+                if (! $elements->contains(fn ($element) => ($element['id'] ?? null) === 'legacy-title-'.$slide->id) && $slide->title) {
+                    $elements->push(['id' => 'legacy-title-'.$slide->id, 'type' => 'text', 'x' => 110, 'y' => 155, 'width' => 900, 'height' => 120, 'rotation' => 0, 'text' => $slide->title, 'fill' => $settings['title_color'], 'fontSize' => 68, 'fontFamily' => 'Arial']);
+                }
+                if (! $elements->contains(fn ($element) => ($element['id'] ?? null) === 'legacy-body-'.$slide->id) && $slide->body) {
+                    $elements->push(['id' => 'legacy-body-'.$slide->id, 'type' => 'text', 'x' => 115, 'y' => 315, 'width' => 880, 'height' => 210, 'rotation' => 0, 'text' => $slide->body, 'fill' => $settings['body_color'], 'fontSize' => 30, 'fontFamily' => 'Arial']);
+                }
+                $elements = $backgrounds->concat($elements)->values()->all();
+                $slide->update(['design' => [...($slide->design ?? []), ...$settings, 'background_mode' => $settings['background_path'] ? 'custom' : 'preset', 'elements' => $elements]]);
+            }
+        });
+
+        return back()->with('ok', 'Tema aplicado a toda la presentación.');
     }
 
     public function reorderSlides(Request $request, Presentation $presentation)

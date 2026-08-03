@@ -6,7 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class Presentation extends Model
 {
-    protected $fillable = ['user_id', 'title', 'description', 'theme'];
+    protected $fillable = ['user_id', 'title', 'description', 'theme', 'theme_settings'];
+
+    protected function casts(): array
+    {
+        return ['theme_settings' => 'array'];
+    }
 
     public function user()
     {

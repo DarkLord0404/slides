@@ -228,4 +228,32 @@ class PresentationFlowTest extends TestCase
   $this->actingAs($user)->putJson('/diapositivas/'.$slide->id.'/lienzo',['elements'=>$elements])->assertOk();
   $this->assertSame('Hola',data_get($slide->fresh()->design,'elements.0.text'));
  }
+
+ public function test_classic_and_visual_editors_share_slide_content():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Sincronizada']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Antes','body'=>'Texto','design'=>['elements'=>[
+   ['id'=>'legacy-title-1','type'=>'text','text'=>'Antes','x'=>10,'y'=>10,'width'=>300,'height'=>80,'rotation'=>0,'fill'=>'#000000'],
+  ]]]);
+  $slide->update(['design'=>['elements'=>[['id'=>'legacy-title-'.$slide->id,'type'=>'text','text'=>'Antes','x'=>10,'y'=>10,'width'=>300,'height'=>80,'rotation'=>0,'fill'=>'#000000']]]]);
+  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>'Desde clásico','body'=>'Texto nuevo','background_style'=>'ivory','background_mode'=>'preset','background_color'=>'#fffdf8','title_color'=>'#112233','body_color'=>'#445566','accent_color'=>'#ff6846','question_background_color'=>'#102a2e','question_text_color'=>'#ffffff','decoration'=>'circle'])->assertRedirect();
+  $this->assertSame('Desde clásico',data_get($slide->fresh()->design,'elements.0.text'));
+  $elements=$slide->fresh()->design['elements'];
+  $elements[0]['text']='Desde lienzo';
+  $this->actingAs($user)->putJson('/diapositivas/'.$slide->id.'/lienzo',['elements'=>$elements])->assertOk();
+  $this->assertSame('Desde lienzo',$slide->fresh()->title);
+ }
+
+ public function test_theme_is_shared_without_removing_canvas_objects():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Temas']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Portada','design'=>['elements'=>[['id'=>'free-object','type'=>'rect','x'=>1,'y'=>1,'width'=>20,'height'=>20,'rotation'=>0,'fill'=>'#000000']]]]);
+  $this->actingAs($user)->put('/presentaciones/'.$presentation->id.'/tema',['theme'=>'ocean'])->assertRedirect();
+  $this->assertSame('ocean',$presentation->fresh()->theme);
+  $this->assertSame('#dff7f5',$presentation->fresh()->theme_settings['background_color']);
+  $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn($element)=>$element['id']==='free-object'));
+  $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn($element)=>$element['id']==='theme-background'));
+ }
 }
