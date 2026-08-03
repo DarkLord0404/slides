@@ -140,4 +140,13 @@ class PresentationFlowTest extends TestCase
   $this->assertSame('custom',data_get($slide->fresh()->design,'background_style'));
   $this->assertSame('#123456',data_get($slide->fresh()->design,'background_color'));
  }
+
+ public function test_presentation_mode_exits_to_editor_without_logging_out():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'En vivo']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Inicio']);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'445566','status'=>'live']);
+  $this->actingAs($user)->get('/sesiones/'.$live->id)->assertOk()->assertSee('Salir de presentación')->assertDontSee('Cerrar sesión');
+ }
 }

@@ -4,12 +4,12 @@
     $displayMode = request()->boolean('display');
     $totalResponses = $slides->sum(fn($slide) => $slide->activities->sum(fn($activity) => $activity->responses->count()));
 @endphp
-<x-layouts.app :title="'Presentando · '.$session->presentation->title" :stage="$displayMode">
+<x-layouts.app :title="'Presentando · '.$session->presentation->title" :stage="$displayMode" :hide-nav="true">
 @if($session->status === 'ended')
 <section class="session-ended"><span>SESIÓN FINALIZADA</span><h1>{{ $session->presentation->title }}</h1><p>La participación fue cerrada y todas las respuestas quedaron documentadas.</p><div class="ended-stats"><div><b>{{ $session->participants->count() }}</b><small>PARTICIPANTES</small></div><div><b>{{ $totalResponses }}</b><small>RESPUESTAS</small></div><div><b>{{ $slides->count() }}</b><small>DIAPOSITIVAS</small></div></div><div class="actions"><a class="btn" href="{{ route('presentations.edit',$session->presentation) }}">Volver al editor</a><a class="ghost" href="{{ route('presentations.index') }}">Mis presentaciones</a></div></section>
 @else
 <div class="presenter-shell {{ $displayMode ? 'display-mode' : '' }}" data-index="{{ $activeIndex }}">
-    @unless($displayMode)<header class="presenter-toolbar"><div><span class="broadcast-dot"></span><b>EN DIRECTO</b><span>{{ $session->presentation->title }}</span></div><div class="toolbar-actions"><button class="tool-btn" id="open-display">↗ Segunda pantalla</button><button class="tool-btn" id="fullscreen">⛶ Pantalla completa</button></div></header>@endunless
+    @unless($displayMode)<header class="presenter-toolbar"><div><span class="broadcast-dot"></span><b>EN DIRECTO</b><span>{{ $session->presentation->title }}</span></div><div class="toolbar-actions"><a class="tool-btn exit-presentation" href="{{ route('presentations.edit',$session->presentation) }}">← Salir de presentación</a><button class="tool-btn" id="open-display">↗ Segunda pantalla</button><button class="tool-btn" id="fullscreen">⛶ Pantalla completa</button></div></header>@endunless
     <section class="stage-wrap"><div class="presentation-stage">
         @foreach($slides as $index => $slide)
         @php($layout = data_get($slide->design, 'layout', $slide->activities->isNotEmpty() ? 'question' : 'content'))
