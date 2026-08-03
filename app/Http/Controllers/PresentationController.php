@@ -39,6 +39,23 @@ class PresentationController extends Controller
         return view('presentations.edit', compact('presentation'));
     }
 
+    public function visualEditor(Presentation $presentation)
+    {
+        $this->owned($presentation);
+        $presentation->load('slides.activities');
+
+        return view('presentations.visual-editor', compact('presentation'));
+    }
+
+    public function saveCanvas(Request $request, Slide $slide)
+    {
+        $this->owned($slide->presentation);
+        $data = $request->validate(['elements' => ['present', 'array', 'max:200']]);
+        $slide->update(['design' => [...($slide->design ?? []), 'elements' => $data['elements']]]);
+
+        return response()->json(['saved' => true, 'saved_at' => now()->toIso8601String()]);
+    }
+
     public function updatePresentation(Request $request, Presentation $presentation)
     {
         $this->owned($presentation);

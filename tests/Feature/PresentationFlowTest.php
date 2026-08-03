@@ -217,4 +217,15 @@ class PresentationFlowTest extends TestCase
   $this->assertDatabaseCount('slide_reactions',1);
   $this->get('/estado/991122')->assertOk()->assertJson(['likes'=>1]);
  }
+
+ public function test_visual_editor_opens_and_autosaves_canvas_elements():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Lienzo libre']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/lienzo')->assertOk()->assertSee('visual-editor');
+  $elements=[['id'=>'one','type'=>'text','x'=>10,'y'=>20,'width'=>300,'height'=>80,'rotation'=>0,'text'=>'Hola','fill'=>'#000000','fontSize'=>40]];
+  $this->actingAs($user)->putJson('/diapositivas/'.$slide->id.'/lienzo',['elements'=>$elements])->assertOk();
+  $this->assertSame('Hola',data_get($slide->fresh()->design,'elements.0.text'));
+ }
 }
