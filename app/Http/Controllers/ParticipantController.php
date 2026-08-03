@@ -43,10 +43,11 @@ class ParticipantController extends Controller
 
     public function state(string $code)
     {
-        $live = LiveSession::where('code', $code)->where('status', 'live')->firstOrFail();
+        $live = LiveSession::where('code', $code)->firstOrFail();
 
         return response()->json([
             'active_slide_id' => $live->active_slide_id,
+            'status' => $live->status,
             'participants' => $live->participants()->where('last_seen_at', '>=', now()->subMinute())->count(),
         ]);
     }
@@ -72,6 +73,10 @@ class ParticipantController extends Controller
             return redirect('/')->withErrors(['code' => 'Vuelve a ingresar tu nombre para participar.']);
         }
         $participant->update(['last_seen_at' => now()]);
+
+        if ($live->status === 'ended') {
+            return view('sessions.ended', compact('live', 'participant'));
+        }
 
         return view('sessions.participate', compact('live', 'participant'));
     }

@@ -39,7 +39,7 @@ class PresentationController extends Controller
     public function addSlide(Request $request, Presentation $presentation)
     {
         $this->owned($presentation);
-        $data = $request->validate(['title' => ['nullable', 'string', 'max:180'], 'body' => ['nullable', 'string', 'max:4000']]);
+        $data = $request->validate(['title' => ['nullable', 'string', 'max:120'], 'body' => ['nullable', 'string', 'max:900']]);
         $presentation->slides()->create([...$data, 'position' => ($presentation->slides()->max('position') ?? 0) + 1]);
 
         return back()->with('ok', 'Diapositiva agregada.');
@@ -48,7 +48,16 @@ class PresentationController extends Controller
     public function updateSlide(Request $request, Slide $slide)
     {
         $this->owned($slide->presentation);
-        $slide->update($request->validate(['title' => ['nullable', 'string', 'max:180'], 'body' => ['nullable', 'string', 'max:4000']]));
+        $data = $request->validate([
+            'title' => ['nullable', 'string', 'max:120'],
+            'body' => ['nullable', 'string', 'max:900'],
+            'layout' => ['nullable', 'in:cover,content,split,question'],
+        ]);
+        $slide->update([
+            'title' => $data['title'] ?? null,
+            'body' => $data['body'] ?? null,
+            'design' => ['layout' => $data['layout'] ?? 'content'],
+        ]);
 
         return back()->with('ok', 'Diapositiva guardada.');
     }
@@ -56,7 +65,7 @@ class PresentationController extends Controller
     public function addActivity(Request $request, Slide $slide)
     {
         $this->owned($slide->presentation);
-        $data = $request->validate(['type' => ['required', 'in:multiple_choice,open_text,word_cloud,true_false'], 'question' => ['required', 'string', 'max:500'], 'options_text' => ['nullable', 'string', 'max:2000']]);
+        $data = $request->validate(['type' => ['required', 'in:multiple_choice,open_text,word_cloud,true_false'], 'question' => ['required', 'string', 'max:220'], 'options_text' => ['nullable', 'string', 'max:500']]);
         $options = collect(preg_split('/\R/', $data['options_text'] ?? ''))->map(fn ($x) => trim($x))->filter()->values()->all();
         if ($data['type'] === 'true_false') {
             $options = ['Verdadero', 'Falso'];
@@ -69,6 +78,7 @@ class PresentationController extends Controller
     public function start(Presentation $presentation)
     {
         $this->owned($presentation);
+        $presentation->sessions()->where('status', 'live')->update(['status' => 'ended', 'ended_at' => now()]);
         do {
             $code = (string) random_int(100000, 999999);
         } while (LiveSession::where('code', $code)->exists());
@@ -93,5 +103,13 @@ class PresentationController extends Controller
         $session->update(['active_slide_id' => $slide->id]);
 
         return response()->json(['active_slide_id' => $slide->id]);
+    }
+
+    public function endSession(LiveSession $session)
+    {
+        $this->owned($session->presentation);
+        $session->update(['status' => 'ended', 'ended_at' => now()]);
+
+        return redirect()->route('sessions.show', $session)->with('ok', 'La sesión terminó correctamente.');
     }
 }

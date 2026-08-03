@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/presentaciones/{presentation}/iniciar', [PresentationController::class, 'start'])->name('presentations.start');
     Route::get('/sesiones/{session}', [PresentationController::class, 'showSession'])->name('sessions.show');
     Route::put('/sesiones/{session}/diapositiva', [PresentationController::class, 'changeSlide'])->name('sessions.slide');
+    Route::post('/sesiones/{session}/terminar', [PresentationController::class, 'endSession'])->name('sessions.end');
 });
 
 Route::post('/unirse', [ParticipantController::class, 'join'])->name('join');

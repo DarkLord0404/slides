@@ -82,4 +82,26 @@ class PresentationFlowTest extends TestCase
   $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'991122','status'=>'live']);
   $this->actingAs($user)->get('/sesiones/'.$live->id)->assertOk()->assertSee('stage-content is-long',false);
  }
+
+ public function test_presenter_can_end_session_and_audience_sees_completion():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Cierre']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$slide->id,'code'=>'445566','status'=>'live']);
+  $participant=$live->participants()->create(['token'=>(string)\Illuminate\Support\Str::uuid(),'name'=>'Ada','last_seen_at'=>now()]);
+  $this->actingAs($user)->post('/sesiones/'.$live->id.'/terminar')->assertRedirect('/sesiones/'.$live->id);
+  $this->assertDatabaseHas('live_sessions',['id'=>$live->id,'status'=>'ended']);
+  $this->withSession(['participant_token'=>$participant->token])->get('/participar/445566')->assertOk()->assertSee('Gracias por participar');
+ }
+
+ public function test_slide_layout_and_text_limits_are_enforced():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Diseños']);
+  $slide=Slide::create(['presentation_id'=>$presentation->id,'position'=>1]);
+  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>'Título','body'=>'Contenido breve','layout'=>'split'])->assertRedirect();
+  $this->assertSame('split',data_get($slide->fresh()->design,'layout'));
+  $this->actingAs($user)->put('/diapositivas/'.$slide->id,['title'=>str_repeat('T',121),'body'=>'Texto','layout'=>'content'])->assertSessionHasErrors('title');
+ }
 }
