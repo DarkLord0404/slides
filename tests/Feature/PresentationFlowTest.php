@@ -7,7 +7,12 @@ use Tests\TestCase;
 
 class PresentationFlowTest extends TestCase
 {
- use RefreshDatabase;
+    use RefreshDatabase;
+
+    public function test_home_page_renders(): void
+    {
+        $this->get('/')->assertOk()->assertSee('Koqoi Slides');
+    }
 
  public function test_creator_can_build_and_start_a_presentation():void
  {
