@@ -61,4 +61,16 @@ class PresentationFlowTest extends TestCase
   $presentation=Presentation::create(['user_id'=>$owner->id,'title'=>'Privada']);
   $this->actingAs($intruder)->get('/presentaciones/'.$presentation->id.'/editar')->assertForbidden();
  }
+
+ public function test_presenter_can_change_the_active_slide():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Escenario']);
+  $first=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Uno']);
+  $second=Slide::create(['presentation_id'=>$presentation->id,'position'=>2,'title'=>'Dos']);
+  $live=LiveSession::create(['presentation_id'=>$presentation->id,'active_slide_id'=>$first->id,'code'=>'777888','status'=>'live']);
+  $this->actingAs($user)->putJson('/sesiones/'.$live->id.'/diapositiva',['slide_id'=>$second->id])->assertOk();
+  $this->assertDatabaseHas('live_sessions',['id'=>$live->id,'active_slide_id'=>$second->id]);
+  $this->get('/estado/777888')->assertOk()->assertJson(['active_slide_id'=>$second->id]);
+ }
 }

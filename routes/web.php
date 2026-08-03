@@ -21,10 +21,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
     Route::post('/presentaciones/{presentation}/iniciar', [PresentationController::class, 'start'])->name('presentations.start');
     Route::get('/sesiones/{session}', [PresentationController::class, 'showSession'])->name('sessions.show');
+    Route::put('/sesiones/{session}/diapositiva', [PresentationController::class, 'changeSlide'])->name('sessions.slide');
 });
 
 Route::post('/unirse', [ParticipantController::class, 'join'])->name('join');
 Route::get('/j/{code}', [ParticipantController::class, 'joinPage'])->whereNumber('code')->name('join.show');
 Route::get('/qr/{session:code}.svg', [ParticipantController::class, 'qr'])->name('session.qr');
+Route::get('/estado/{code}', [ParticipantController::class, 'state'])->whereNumber('code')->name('session.state');
 Route::get('/participar/{code}', [ParticipantController::class, 'participate'])->name('participate');
 Route::post('/actividades/{activity}/responder', [ParticipantController::class, 'answer'])->name('answer');

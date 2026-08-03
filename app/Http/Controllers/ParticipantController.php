@@ -41,6 +41,16 @@ class ParticipantController extends Controller
         ]);
     }
 
+    public function state(string $code)
+    {
+        $live = LiveSession::where('code', $code)->where('status', 'live')->firstOrFail();
+
+        return response()->json([
+            'active_slide_id' => $live->active_slide_id,
+            'participants' => $live->participants()->where('last_seen_at', '>=', now()->subMinute())->count(),
+        ]);
+    }
+
     public function join(Request $request)
     {
         $data = $request->validate(['code' => ['required', 'digits:6'], 'name' => ['required', 'string', 'max:80']]);

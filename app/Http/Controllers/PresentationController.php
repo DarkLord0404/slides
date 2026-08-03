@@ -84,4 +84,14 @@ class PresentationController extends Controller
 
         return view('sessions.show', compact('session'));
     }
+
+    public function changeSlide(Request $request, LiveSession $session)
+    {
+        $this->owned($session->presentation);
+        $data = $request->validate(['slide_id' => ['required', 'integer']]);
+        $slide = $session->presentation->slides()->findOrFail($data['slide_id']);
+        $session->update(['active_slide_id' => $slide->id]);
+
+        return response()->json(['active_slide_id' => $slide->id]);
+    }
 }
