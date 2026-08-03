@@ -4,6 +4,7 @@
     $displayMode = request()->boolean('display');
     $totalResponses = $slides->sum(fn($slide) => $slide->activities->sum(fn($activity) => $activity->responses->count()));
 @endphp
+<style>.visual-ellipse{background:transparent!important;border:clamp(12px,2.3vw,42px) solid currentColor;border-radius:50%}.stage-slide:has(.visual-elements):after{display:none}</style>
 <x-layouts.app :title="'Presentando · '.$session->presentation->title" :stage="$displayMode" :hide-nav="true">
 @if($session->status === 'ended')
 <section class="session-ended"><span>SESIÓN FINALIZADA</span><h1>{{ $session->presentation->title }}</h1><p>La participación fue cerrada y todas las respuestas quedaron documentadas.</p><div class="ended-stats"><div><b>{{ $session->participants->count() }}</b><small>PARTICIPANTES</small></div><div><b>{{ $totalResponses }}</b><small>RESPUESTAS</small></div><div><b>{{ $slides->count() }}</b><small>DIAPOSITIVAS</small></div></div><div class="actions"><a class="btn" href="{{ route('presentations.edit',$session->presentation) }}">Volver al editor</a><a class="ghost" href="{{ route('presentations.index') }}">Mis presentaciones</a></div></section>

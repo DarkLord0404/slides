@@ -4,12 +4,13 @@ import { Stage, Layer, Rect, Text, Image as KImage, Transformer } from 'react-ko
 import './visual-editor.css';
 import './visual-theme.css';
 import './visual-interactions.css';
+import './visual-layers.css';
 
-type ElementType = 'text' | 'rect' | 'image';
+type ElementType = 'text' | 'rect' | 'ellipse' | 'image';
 type CanvasElement = {
     id: string; type: ElementType; x: number; y: number; width: number; height: number;
     rotation: number; text?: string; src?: string; fill?: string; fontSize?: number;
-    fontFamily?: string; fontStyle?: string;
+    fontFamily?: string; fontStyle?: string; strokeWidth?: number;
 };
 type Activity = { id: number; type: string; question: string; options: string[]; delete_url: string };
 type Slide = {
@@ -27,7 +28,7 @@ function Picture({ item, nodeRef, onSelect, onChange }: any) {
         img.onload = () => setImage(img);
         img.src = item.src;
     }, [item.src]);
-    return <KImage ref={nodeRef} image={image} {...item} draggable onClick={onSelect} onTap={onSelect}
+    return <KImage ref={nodeRef} image={image} {...item} draggable={!item.id.startsWith('theme-')} onClick={onSelect} onTap={onSelect}
         onDragEnd={e => onChange({ ...item, x: e.target.x(), y: e.target.y() })}
         onTransformEnd={e => {
             const n = e.target, sx = n.scaleX(), sy = n.scaleY();
@@ -97,6 +98,16 @@ function App() {
     const beginEdit = (item: CanvasElement) => { setSelected(item.id); setEditing(item.id); setDraft(item.text || ''); };
     const finishEdit = () => { if (editing) { const item = slide.elements.find(e => e.id === editing); if (item) change({ ...item, text: draft }); } setEditing(null); };
     const undo = () => { const previous = history.at(-1); if (previous) { setHistory(h => h.slice(0, -1)); update(previous, false); } };
+    const moveLayer = (mode: 'back' | 'down' | 'up' | 'front') => {
+        if (!selected) return;
+        const elements = [...slide.elements], index = elements.findIndex(item => item.id === selected);
+        if (index < 0) return;
+        const [item] = elements.splice(index, 1);
+        let floor = 0;
+        while (floor < elements.length && elements[floor].id.startsWith('theme-')) floor++;
+        const target = mode === 'back' ? floor : mode === 'front' ? elements.length : mode === 'down' ? Math.max(floor, index - 1) : Math.min(elements.length, index + 1);
+        elements.splice(target, 0, item); update(elements);
+    };
 
     return <div className="ve">
         <header>
@@ -112,6 +123,7 @@ function App() {
                 <button onClick={() => change({ ...chosen, fontStyle: chosen.fontStyle === 'bold' ? 'normal' : 'bold' })}>Negrita</button>
                 <p className="hint">El marco cambia el espacio del texto; el tamaño de letra solo cambia aquí.</p>
             </div> : chosen ? <div className="properties"><label>Color<input type="color" value={chosen.fill || '#ff6846'} onChange={e => change({ ...chosen, fill: e.target.value })} /></label></div> : <p className="hint">Selecciona un objeto para modificarlo.</p>}</section>
+            {chosen && !chosen.id.startsWith('theme-') && <section><h3>Orden de capas</h3><div className="layer-controls"><button onClick={() => moveLayer('back')}>⇤ Al fondo</button><button onClick={() => moveLayer('down')}>↓ Bajar</button><button onClick={() => moveLayer('up')}>↑ Subir</button><button onClick={() => moveLayer('front')}>⇥ Al frente</button></div><p className="hint">Los objetos que están más al frente cubren a los que están detrás.</p></section>}
             <section><h3>Interacciones de esta diapositiva</h3><div className="activity-list">{slide.activities.map(activity => <div key={activity.id}><b>{activity.question}</b><small>{activity.type.replace('_', ' ')}</small><form method="post" action={activity.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta interacción?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>Eliminar</button></form></div>)}</div>
                 {!interaction ? <div className="interaction-list"><button onClick={() => setInteraction('multiple_choice')}>Encuesta</button><button onClick={() => setInteraction('word_cloud')}>Nube de palabras</button><button onClick={() => setInteraction('open_text')}>Pregunta abierta</button><button onClick={() => setInteraction('true_false')}>Verdadero / falso</button></div> : <form className="new-activity" method="post" action={slide.activity_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="type" value={interaction} /><label>Pregunta<textarea name="question" maxLength={220} required autoFocus /></label>{interaction === 'multiple_choice' && <label>Opciones, una por línea<textarea name="options_text" maxLength={500} required /></label>}<div><button type="button" onClick={() => setInteraction('')}>Cancelar</button><button>Agregar</button></div></form>}
                 <p className="hint">Los “Me gusta” ya están disponibles automáticamente para la audiencia.</p>
@@ -119,7 +131,7 @@ function App() {
         </aside>
         <main><div className="ruler">Diapositiva {active + 1} · 1280 × 720</div><div className="canvas-shell">
             <Stage width={960} height={540} scaleX={scale} scaleY={scale} onMouseDown={e => { if (e.target === e.target.getStage()) setSelected(null); }}><Layer><Rect width={1280} height={720} fill="#fffdf8" />
-                {slide.elements.map(item => item.type === 'text' ? <React.Fragment key={item.id}>{selected === item.id && <Rect x={item.x} y={item.y} width={item.width} height={item.height} rotation={item.rotation} stroke="#007f7b" strokeWidth={2} dash={[8, 6]} listening={false} />}<Text ref={node => { nodes.current[item.id] = node; }} {...item} wrap="word" verticalAlign="top" opacity={editing === item.id ? 0 : 1} draggable onClick={() => setSelected(item.id)} onTap={() => setSelected(item.id)} onDblClick={() => beginEdit(item)} onDblTap={() => beginEdit(item)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: Math.max(80, item.width * sx), height: Math.max(item.fontSize || 20, item.height * sy), fontSize: item.fontSize }); }} /></React.Fragment> : item.type === 'rect' ? <Rect key={item.id} ref={node => { nodes.current[item.id] = node; }} {...item} draggable onClick={() => setSelected(item.id)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: node.width() * sx, height: node.height() * sy }); }} /> : <Picture key={item.id} nodeRef={(node: any) => nodes.current[item.id] = node} item={item} onSelect={() => setSelected(item.id)} onChange={change} />)}
+                {slide.elements.map(item => item.type === 'text' ? <React.Fragment key={item.id}>{selected === item.id && <Rect x={item.x} y={item.y} width={item.width} height={item.height} rotation={item.rotation} stroke="#007f7b" strokeWidth={2} dash={[8, 6]} listening={false} />}<Text ref={node => { nodes.current[item.id] = node; }} {...item} wrap="word" verticalAlign="top" opacity={editing === item.id ? 0 : 1} draggable onClick={() => setSelected(item.id)} onTap={() => setSelected(item.id)} onDblClick={() => beginEdit(item)} onDblTap={() => beginEdit(item)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: Math.max(80, item.width * sx), height: Math.max(item.fontSize || 20, item.height * sy), fontSize: item.fontSize }); }} /></React.Fragment> : item.type === 'rect' || item.type === 'ellipse' ? <Rect key={item.id} ref={node => { nodes.current[item.id] = node; }} {...item} fill={item.type === 'ellipse' ? 'transparent' : item.fill} stroke={item.type === 'ellipse' ? item.fill : undefined} strokeWidth={item.type === 'ellipse' ? item.strokeWidth || 30 : undefined} cornerRadius={item.type === 'ellipse' ? 999 : 0} draggable onClick={() => setSelected(item.id)} onTap={() => setSelected(item.id)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: node.width() * sx, height: node.height() * sy }); }} /> : <Picture key={item.id} nodeRef={(node: any) => nodes.current[item.id] = node} item={item} onSelect={() => setSelected(item.id)} onChange={change} />)}
                 <Transformer ref={transformer} rotateEnabled enabledAnchors={chosen?.type === 'text' ? ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right'] : undefined} boundBoxFunc={(_, box) => box.width < 30 || box.height < 20 ? _ : box} />
             </Layer></Stage>
             {editing && chosen?.type === 'text' && <textarea autoFocus className="inline-editor" style={{ left: chosen.x * scale, top: chosen.y * scale, width: chosen.width * scale, height: chosen.height * scale, fontSize: (chosen.fontSize || 40) * scale, fontFamily: chosen.fontFamily, color: chosen.fill, fontWeight: chosen.fontStyle === 'bold' ? 700 : 400, transform: `rotate(${chosen.rotation}deg)` }} value={draft} onChange={e => setDraft(e.target.value)} onBlur={finishEdit} onKeyDown={e => { if (e.key === 'Escape') setEditing(null); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finishEdit(); }} />}

@@ -183,7 +183,7 @@ class PresentationController extends Controller
         DB::transaction(function () use ($presentation, $data, $settings) {
             $presentation->update(['theme' => $data['theme'], 'theme_settings' => $settings]);
             foreach ($presentation->slides as $slide) {
-                $elements = collect(data_get($slide->design, 'elements', []))->reject(fn ($element) => in_array($element['id'] ?? null, ['theme-background', 'theme-background-image'], true))->map(function ($element) use ($slide, $settings) {
+                $elements = collect(data_get($slide->design, 'elements', []))->reject(fn ($element) => in_array($element['id'] ?? null, ['theme-background', 'theme-background-image'], true) || str_starts_with($element['id'] ?? '', 'theme-ring-'))->map(function ($element) use ($slide, $settings) {
                     if (($element['id'] ?? null) === 'legacy-title-'.$slide->id) {
                         $element['fill'] = $settings['title_color'];
                     }
@@ -196,6 +196,10 @@ class PresentationController extends Controller
                 $backgrounds = collect([['id' => 'theme-background', 'type' => 'rect', 'x' => 0, 'y' => 0, 'width' => 1280, 'height' => 720, 'rotation' => 0, 'fill' => $settings['background_color']]]);
                 if ($settings['background_path']) {
                     $backgrounds->push(['id' => 'theme-background-image', 'type' => 'image', 'x' => 0, 'y' => 0, 'width' => 1280, 'height' => 720, 'rotation' => 0, 'src' => Storage::disk('public')->url($settings['background_path'])]);
+                }
+                if ($settings['decoration'] === 'circle') {
+                    $backgrounds->push(['id' => 'theme-ring-1', 'type' => 'ellipse', 'x' => 1030, 'y' => -170, 'width' => 430, 'height' => 430, 'rotation' => 0, 'fill' => $settings['accent_color'], 'strokeWidth' => 42]);
+                    $backgrounds->push(['id' => 'theme-ring-2', 'type' => 'ellipse', 'x' => -170, 'y' => 535, 'width' => 340, 'height' => 340, 'rotation' => 0, 'fill' => $settings['accent_color'], 'strokeWidth' => 34]);
                 }
                 if (! $elements->contains(fn ($element) => ($element['id'] ?? null) === 'legacy-title-'.$slide->id) && $slide->title) {
                     $elements->push(['id' => 'legacy-title-'.$slide->id, 'type' => 'text', 'x' => 110, 'y' => 155, 'width' => 900, 'height' => 120, 'rotation' => 0, 'text' => $slide->title, 'fill' => $settings['title_color'], 'fontSize' => 68, 'fontFamily' => 'Arial']);

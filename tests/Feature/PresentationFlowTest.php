@@ -255,5 +255,6 @@ class PresentationFlowTest extends TestCase
   $this->assertSame('#dff7f5',$presentation->fresh()->theme_settings['background_color']);
   $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn($element)=>$element['id']==='free-object'));
   $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn($element)=>$element['id']==='theme-background'));
+  $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn($element)=>$element['id']==='theme-ring-1'));
  }
 }
