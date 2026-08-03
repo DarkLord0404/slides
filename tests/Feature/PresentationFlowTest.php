@@ -161,4 +161,26 @@ class PresentationFlowTest extends TestCase
   Response::create(['activity_id'=>$activity->id,'participant_id'=>$participant->id,'answer'=>'Dos']);
   $this->withSession(['participant_token'=>$participant->token])->get('/participar/778899')->assertOk()->assertSee('✓ RESPONDIDA')->assertSee('✓ Tu respuesta')->assertSee('Actualizar respuesta')->assertSee('value="Dos" checked',false);
  }
+
+ public function test_creator_can_reorder_and_delete_slides():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Orden']);
+  $first=Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Primera']);
+  $second=Slide::create(['presentation_id'=>$presentation->id,'position'=>2,'title'=>'Segunda']);
+  $third=Slide::create(['presentation_id'=>$presentation->id,'position'=>3,'title'=>'Tercera']);
+  $this->actingAs($user)->putJson('/presentaciones/'.$presentation->id.'/diapositivas/orden',['slide_ids'=>[$third->id,$first->id,$second->id]])->assertOk();
+  $this->assertSame(1,$third->fresh()->position);
+  $this->actingAs($user)->delete('/diapositivas/'.$first->id)->assertRedirect();
+  $this->assertDatabaseMissing('slides',['id'=>$first->id]);
+  $this->assertSame([1,2],$presentation->slides()->orderBy('position')->pluck('position')->all());
+ }
+
+ public function test_editor_contains_live_canvas_and_reorder_controls():void
+ {
+  $user=User::factory()->create();
+  $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Editor']);
+  Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Lienzo']);
+  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/editar')->assertOk()->assertSee('editor-canvas')->assertSee('Arrastra para reordenar');
+ }
 }

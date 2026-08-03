@@ -7,6 +7,7 @@ use App\Models\LiveSession;
 use App\Models\Presentation;
 use App\Models\Slide;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PresentationController extends Controller
@@ -83,6 +84,36 @@ class PresentationController extends Controller
         ]);
 
         return back()->with('ok', 'Diapositiva guardada.');
+    }
+
+    public function reorderSlides(Request $request, Presentation $presentation)
+    {
+        $this->owned($presentation);
+        $data = $request->validate(['slide_ids' => ['required', 'array', 'min:1'], 'slide_ids.*' => ['required', 'integer', 'distinct']]);
+        abort_unless($presentation->slides()->pluck('id')->sort()->values()->all() === collect($data['slide_ids'])->sort()->values()->all(), 422);
+        DB::transaction(function () use ($data, $presentation) {
+            foreach ($data['slide_ids'] as $index => $slideId) {
+                $presentation->slides()->whereKey($slideId)->update(['position' => $index + 1]);
+            }
+        });
+
+        return response()->json(['saved' => true]);
+    }
+
+    public function deleteSlide(Slide $slide)
+    {
+        $this->owned($slide->presentation);
+        abort_if($slide->presentation->slides()->count() <= 1, 422, 'La presentación debe conservar al menos una diapositiva.');
+        $presentation = $slide->presentation;
+        if ($slide->background_path) {
+            Storage::disk('public')->delete($slide->background_path);
+        }
+        $slide->delete();
+        foreach ($presentation->slides()->orderBy('position')->get() as $index => $remainingSlide) {
+            $remainingSlide->update(['position' => $index + 1]);
+        }
+
+        return back()->with('ok', 'Diapositiva eliminada.');
     }
 
     public function addActivity(Request $request, Slide $slide)

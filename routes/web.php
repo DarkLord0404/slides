@@ -17,7 +17,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/presentaciones', [PresentationController::class, 'store'])->name('presentations.store');
     Route::get('/presentaciones/{presentation}/editar', [PresentationController::class, 'edit'])->name('presentations.edit');
     Route::post('/presentaciones/{presentation}/diapositivas', [PresentationController::class, 'addSlide'])->name('slides.store');
+    Route::put('/presentaciones/{presentation}/diapositivas/orden', [PresentationController::class, 'reorderSlides'])->name('slides.reorder');
     Route::put('/diapositivas/{slide}', [PresentationController::class, 'updateSlide'])->name('slides.update');
+    Route::delete('/diapositivas/{slide}', [PresentationController::class, 'deleteSlide'])->name('slides.destroy');
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
     Route::put('/actividades/{activity}', [PresentationController::class, 'updateActivity'])->name('activities.update');
     Route::post('/presentaciones/{presentation}/iniciar', [PresentationController::class, 'start'])->name('presentations.start');
