@@ -4,7 +4,6 @@ import { Stage, Layer, Rect, Text, Image as KImage, Transformer } from 'react-ko
 import '@fontsource-variable/montserrat/wght.css';
 import '@fontsource-variable/montserrat/wght-italic.css';
 import './visual-editor.css';
-import './visual-theme.css';
 import './visual-interactions.css';
 import './visual-layers.css';
 
