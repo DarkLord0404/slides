@@ -247,7 +247,7 @@ class PresentationFlowTest extends TestCase
         Slide::create(['presentation_id' => $presentation->id, 'position' => 1, 'design' => ['elements' => [['id' => 'first', 'type' => 'text', 'text' => 'Contenido inicial']]]]);
         $second = Slide::create(['presentation_id' => $presentation->id, 'position' => 2, 'design' => ['elements' => [['id' => 'second', 'type' => 'text', 'text' => 'CONTENIDO-PESADO-OCULTO']]]]);
         $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/editar')
-            ->assertOk()->assertSee('Contenido inicial')->assertDontSee('CONTENIDO-PESADO-OCULTO')->assertSee('/diapositivas/'.$second->id.'/lienzo');
+            ->assertOk()->assertSee('Contenido inicial')->assertDontSee('CONTENIDO-PESADO-OCULTO')->assertSee('"loaded":false', false);
     }
 
     public function test_classic_and_visual_editors_share_slide_content(): void
