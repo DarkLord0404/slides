@@ -36,7 +36,7 @@ class PresentationController extends Controller
         $this->owned($presentation);
         $presentation->load('slides.activities');
 
-        return view('presentations.edit', compact('presentation'));
+        return view('presentations.visual-editor', compact('presentation'));
     }
 
     public function visualEditor(Presentation $presentation)

@@ -183,7 +183,7 @@ class PresentationFlowTest extends TestCase
   $user=User::factory()->create();
   $presentation=Presentation::create(['user_id'=>$user->id,'title'=>'Editor']);
   Slide::create(['presentation_id'=>$presentation->id,'position'=>1,'title'=>'Lienzo']);
-  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/editar')->assertOk()->assertSee('editor-canvas')->assertSee('Arrastra para reordenar');
+  $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/editar')->assertOk()->assertSee('visual-editor')->assertSee('activity_url');
  }
 
  public function test_creator_can_delete_an_interaction():void

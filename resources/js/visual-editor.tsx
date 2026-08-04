@@ -15,7 +15,7 @@ type CanvasElement = {
 type Activity = { id: number; type: string; question: string; options: string[]; delete_url: string };
 type Slide = {
     id: number; position: number; title: string; elements: CanvasElement[]; save_url: string;
-    activity_url: string; activities: Activity[];
+    activity_url: string; delete_url: string; activities: Activity[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -58,7 +58,10 @@ function App() {
         setSlides(all => all.map((value, index) => index === active ? { ...value, elements } : value));
         setStatus('Guardando…');
     };
-    const change = (next: CanvasElement) => update(slide.elements.map(item => item.id === next.id ? next : item));
+    const change = (next: CanvasElement) => {
+        update(slide.elements.map(item => item.id === next.id ? next : item));
+        if (next.id === `legacy-title-${slide.id}`) setSlides(all => all.map((value, index) => index === active ? { ...value, title: next.text || '' } : value));
+    };
 
     useEffect(() => {
         const timer = setTimeout(async () => {
@@ -108,11 +111,19 @@ function App() {
         const target = mode === 'back' ? floor : mode === 'front' ? elements.length : mode === 'down' ? Math.max(floor, index - 1) : Math.min(elements.length, index + 1);
         elements.splice(target, 0, item); update(elements);
     };
+    const moveSlide = async (index: number, direction: number) => {
+        const target = index + direction;
+        if (target < 0 || target >= slides.length) return;
+        const reordered = [...slides];
+        [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+        setSlides(reordered); setActive(target); setStatus('Guardando orden…');
+        const response = await fetch(data.reorder_url, { method: 'PUT', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': data.csrf }, body: JSON.stringify({ slide_ids: reordered.map(item => item.id) }) });
+        setStatus(response.ok ? 'Guardado' : 'Error al ordenar');
+    };
 
     return <div className="ve">
         <header>
-            <a href={data.edit_url} onClick={event => { if (!confirm('Volverás a la edición asistida. Los objetos avanzados se conservarán, pero allí solo podrás modificar título, contenido, fondo e interacciones.')) event.preventDefault(); }}>← Edición asistida</a>
-            <b>{data.title}</b><span>{status}</span><button onClick={undo}>↶ Deshacer</button>
+            <a href={data.edit_url}>← Presentaciones</a><img src="/brand/koqoi-mark.svg" alt="" /><b>{data.title}</b><span>{status}</span><button onClick={undo}>↶ Deshacer</button>
         </header>
         <aside>
             <section><h3>Agregar</h3><div className="tool-grid"><button onClick={addText}>A Texto</button><button onClick={addRect}>□ Forma</button><label>▧ Imagen<input type="file" accept="image/*" onChange={e => e.target.files?.[0] && addImage(e.target.files[0])} /></label></div></section>
@@ -136,7 +147,7 @@ function App() {
             </Layer></Stage>
             {editing && chosen?.type === 'text' && <textarea autoFocus className="inline-editor" style={{ left: chosen.x * scale, top: chosen.y * scale, width: chosen.width * scale, height: chosen.height * scale, fontSize: (chosen.fontSize || 40) * scale, fontFamily: chosen.fontFamily, color: chosen.fill, fontWeight: chosen.fontStyle === 'bold' ? 700 : 400, transform: `rotate(${chosen.rotation}deg)` }} value={draft} onChange={e => setDraft(e.target.value)} onBlur={finishEdit} onKeyDown={e => { if (e.key === 'Escape') setEditing(null); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finishEdit(); }} />}
         </div><small>Doble clic para escribir · el marco verde delimita el texto · Supr elimina</small></main>
-        <nav><h3>Diapositivas</h3><div className="filmstrip">{slides.map((item, index) => <button key={item.id} className={index === active ? 'active' : ''} onClick={() => { setActive(index); setSelected(null); setEditing(null); setInteraction(''); }}><span>{index + 1}</span><div>{item.title || 'Sin título'}</div></button>)}</div></nav>
+        <nav><div className="pages-head"><h3>Páginas</h3><form method="post" action={data.slide_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="title" value="Nueva diapositiva" /><button title="Agregar diapositiva">＋</button></form></div><div className="filmstrip">{slides.map((item, index) => <div key={item.id} className={`page-item ${index === active ? 'active' : ''}`}><button className="page-preview" onClick={() => { setActive(index); setSelected(null); setEditing(null); setInteraction(''); }}><span>{index + 1}</span><div>{item.title || 'Sin título'}</div></button><div className="page-actions"><button onClick={() => moveSlide(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>↓</button>{slides.length > 1 && <form method="post" action={item.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta diapositiva?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>×</button></form>}</div></div>)}</div></nav>
     </div>;
 }
 
