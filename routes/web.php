@@ -23,6 +23,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/presentaciones/{presentation}/diapositivas/orden', [PresentationController::class, 'reorderSlides'])->name('slides.reorder');
     Route::put('/diapositivas/{slide}', [PresentationController::class, 'updateSlide'])->name('slides.update');
     Route::put('/diapositivas/{slide}/lienzo', [PresentationController::class, 'saveCanvas'])->name('slides.canvas');
+    Route::get('/diapositivas/{slide}/lienzo', [PresentationController::class, 'loadCanvas'])->name('slides.canvas.load');
     Route::delete('/diapositivas/{slide}', [PresentationController::class, 'deleteSlide'])->name('slides.destroy');
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
     Route::put('/actividades/{activity}', [PresentationController::class, 'updateActivity'])->name('activities.update');

@@ -11,9 +11,9 @@ $editorData = [
     'theme_settings' => $presentation->theme_settings ?? [],
     'theme_url' => route('presentations.theme', $presentation),
     'csrf' => csrf_token(),
-    'slides' => $editorSlides->map(function ($slide) {
+    'slides' => $editorSlides->values()->map(function ($slide, $index) {
         $elements = data_get($slide->design, 'elements', []);
-        if (empty($elements)) {
+        if ($index === 0 && empty($elements)) {
             $elements = array_values(array_filter([
                 $slide->title ? ['id' => 'legacy-title-'.$slide->id, 'type' => 'text', 'x' => 110, 'y' => 155, 'width' => 900, 'height' => 120, 'rotation' => 0, 'text' => $slide->title, 'fill' => data_get($slide->design, 'title_color', '#102a2e'), 'fontSize' => 68, 'fontFamily' => 'Arial'] : null,
                 $slide->body ? ['id' => 'legacy-body-'.$slide->id, 'type' => 'text', 'x' => 115, 'y' => 315, 'width' => 880, 'height' => 210, 'rotation' => 0, 'text' => $slide->body, 'fill' => data_get($slide->design, 'body_color', '#536568'), 'fontSize' => 30, 'fontFamily' => 'Arial'] : null,
@@ -23,9 +23,9 @@ $editorData = [
             'id' => $slide->id,
             'position' => $slide->position,
             'title' => $slide->title,
-            'elements' => $elements,
-            'design' => $slide->design ?? [],
-            'background_url' => $slide->background_path ? asset('storage/'.$slide->background_path) : null,
+            'elements' => $index === 0 ? $elements : [],
+            'loaded' => $index === 0,
+            'load_url' => route('slides.canvas.load', $slide),
             'save_url' => route('slides.canvas', $slide),
             'delete_url' => route('slides.destroy', $slide),
             'activity_url' => route('activities.store', $slide),

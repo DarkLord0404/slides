@@ -15,7 +15,7 @@ type CanvasElement = {
 type Activity = { id: number; type: string; question: string; options: string[]; delete_url: string };
 type Slide = {
     id: number; position: number; title: string; elements: CanvasElement[]; save_url: string;
-    activity_url: string; delete_url: string; activities: Activity[];
+    activity_url: string; delete_url: string; load_url: string; loaded: boolean; activities: Activity[];
 };
 
 const uid = () => crypto.randomUUID();
@@ -63,14 +63,16 @@ function App() {
         if (next.id === `legacy-title-${slide.id}`) setSlides(all => all.map((value, index) => index === active ? { ...value, title: next.text || '' } : value));
     };
 
+    const persistSlide = (target: Slide) => fetch(target.save_url, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': data.csrf },
+        body: JSON.stringify({ elements: target.elements }),
+    });
+
     useEffect(() => {
         const timer = setTimeout(async () => {
             if (status !== 'Guardando…') return;
-            const response = await fetch(slide.save_url, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': data.csrf },
-                body: JSON.stringify({ elements: slide.elements }),
-            });
+            const response = await persistSlide(slide);
             setStatus(response.ok ? 'Guardado' : 'Error al guardar');
         }, 450);
         return () => clearTimeout(timer);
@@ -120,6 +122,20 @@ function App() {
         const response = await fetch(data.reorder_url, { method: 'PUT', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': data.csrf }, body: JSON.stringify({ slide_ids: reordered.map(item => item.id) }) });
         setStatus(response.ok ? 'Guardado' : 'Error al ordenar');
     };
+    const selectSlide = async (index: number) => {
+        setSelected(null); setEditing(null); setInteraction('');
+        if (status === 'Guardando…') {
+            const saved = await persistSlide(slide);
+            if (!saved.ok) { setStatus('Error al guardar'); return; }
+        }
+        if (slides[index].loaded) { setActive(index); return; }
+        setStatus('Cargando diapositiva…');
+        const response = await fetch(slides[index].load_url, { headers: { Accept: 'application/json' } });
+        if (!response.ok) { setStatus('No se pudo cargar'); return; }
+        const payload = await response.json();
+        setSlides(all => all.map((item, position) => position === index ? { ...item, elements: payload.elements, loaded: true } : item));
+        setActive(index); setStatus('Guardado');
+    };
 
     return <div className="ve">
         <header>
@@ -147,7 +163,7 @@ function App() {
             </Layer></Stage>
             {editing && chosen?.type === 'text' && <textarea autoFocus className="inline-editor" style={{ left: chosen.x * scale, top: chosen.y * scale, width: chosen.width * scale, height: chosen.height * scale, fontSize: (chosen.fontSize || 40) * scale, fontFamily: chosen.fontFamily, color: chosen.fill, fontWeight: chosen.fontStyle === 'bold' ? 700 : 400, transform: `rotate(${chosen.rotation}deg)` }} value={draft} onChange={e => setDraft(e.target.value)} onBlur={finishEdit} onKeyDown={e => { if (e.key === 'Escape') setEditing(null); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finishEdit(); }} />}
         </div><small>Doble clic para escribir · el marco verde delimita el texto · Supr elimina</small></main>
-        <nav><div className="pages-head"><h3>Páginas</h3><form method="post" action={data.slide_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="title" value="Nueva diapositiva" /><button title="Agregar diapositiva">＋</button></form></div><div className="filmstrip">{slides.map((item, index) => <div key={item.id} className={`page-item ${index === active ? 'active' : ''}`}><button className="page-preview" onClick={() => { setActive(index); setSelected(null); setEditing(null); setInteraction(''); }}><span>{index + 1}</span><div>{item.title || 'Sin título'}</div></button><div className="page-actions"><button onClick={() => moveSlide(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>↓</button>{slides.length > 1 && <form method="post" action={item.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta diapositiva?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>×</button></form>}</div></div>)}</div></nav>
+        <nav><div className="pages-head"><h3>Páginas</h3><form method="post" action={data.slide_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="title" value="Nueva diapositiva" /><button title="Agregar diapositiva">＋</button></form></div><div className="filmstrip">{slides.map((item, index) => <div key={item.id} className={`page-item ${index === active ? 'active' : ''}`}><button className="page-preview" onClick={() => selectSlide(index)}><span>{index + 1}</span><div>{item.title || 'Sin título'}</div></button><div className="page-actions"><button onClick={() => moveSlide(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>↓</button>{slides.length > 1 && <form method="post" action={item.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta diapositiva?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>×</button></form>}</div></div>)}</div></nav>
     </div>;
 }
 

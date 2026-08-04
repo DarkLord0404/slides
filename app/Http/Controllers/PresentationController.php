@@ -62,6 +62,20 @@ class PresentationController extends Controller
         return response()->json(['saved' => true, 'saved_at' => now()->toIso8601String()]);
     }
 
+    public function loadCanvas(Slide $slide)
+    {
+        $this->owned($slide->presentation);
+        $elements = data_get($slide->design, 'elements', []);
+        if (empty($elements)) {
+            $elements = array_values(array_filter([
+                $slide->title ? ['id' => 'legacy-title-'.$slide->id, 'type' => 'text', 'x' => 110, 'y' => 155, 'width' => 900, 'height' => 120, 'rotation' => 0, 'text' => $slide->title, 'fill' => data_get($slide->design, 'title_color', '#102a2e'), 'fontSize' => 68, 'fontFamily' => 'Arial'] : null,
+                $slide->body ? ['id' => 'legacy-body-'.$slide->id, 'type' => 'text', 'x' => 115, 'y' => 315, 'width' => 880, 'height' => 210, 'rotation' => 0, 'text' => $slide->body, 'fill' => data_get($slide->design, 'body_color', '#536568'), 'fontSize' => 30, 'fontFamily' => 'Arial'] : null,
+            ]));
+        }
+
+        return response()->json(['elements' => $elements]);
+    }
+
     public function updatePresentation(Request $request, Presentation $presentation)
     {
         $this->owned($presentation);
