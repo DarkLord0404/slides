@@ -1,13 +1,15 @@
 @php
+$selectedSlideId = request()->integer('slide');
+$editorSlides = $selectedSlideId ? $presentation->slides->where('id', $selectedSlideId) : $presentation->slides;
 $editorData = [
     'id' => $presentation->id,
     'title' => $presentation->title,
-    'edit_url' => route('presentations.edit', $presentation),
+    'edit_url' => route('presentations.edit', $presentation).($selectedSlideId ? '#slide-'.$selectedSlideId : ''),
     'theme' => $presentation->theme ?: 'koqoi',
     'theme_settings' => $presentation->theme_settings ?? [],
     'theme_url' => route('presentations.theme', $presentation),
     'csrf' => csrf_token(),
-    'slides' => $presentation->slides->map(function ($slide) {
+    'slides' => $editorSlides->map(function ($slide) {
         $elements = data_get($slide->design, 'elements', []);
         if (empty($elements)) {
             $elements = array_values(array_filter([
