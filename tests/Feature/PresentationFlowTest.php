@@ -289,4 +289,31 @@ class PresentationFlowTest extends TestCase
         $this->actingAs(User::factory()->create())->get('/presentaciones/'.$presentation->id.'/tema')
             ->assertForbidden();
     }
+
+    public function test_creator_can_apply_a_background_to_every_slide(): void
+    {
+        $user = User::factory()->create();
+        $presentation = Presentation::create(['user_id' => $user->id, 'title' => 'Fondos']);
+        $first = Slide::create(['presentation_id' => $presentation->id, 'position' => 1, 'design' => ['elements' => [['id' => 'content-one', 'type' => 'text', 'text' => 'Uno']]]]);
+        $second = Slide::create(['presentation_id' => $presentation->id, 'position' => 2, 'design' => ['elements' => [['id' => 'content-two', 'type' => 'text', 'text' => 'Dos']]]]);
+        $backgrounds = [
+            ['id' => 'theme-background', 'type' => 'rect', 'x' => 0, 'y' => 0, 'width' => 1280, 'height' => 720, 'rotation' => 0, 'fill' => '#123456'],
+            ['id' => 'theme-ring-1', 'type' => 'ellipse', 'x' => 900, 'y' => 0, 'width' => 300, 'height' => 300, 'rotation' => 0, 'fill' => '#ff6846', 'strokeWidth' => 30],
+        ];
+
+        $this->actingAs($user)->putJson('/presentaciones/'.$presentation->id.'/fondos', ['background_elements' => $backgrounds])->assertOk();
+        $this->assertSame('#123456', data_get($first->fresh()->design, 'elements.0.fill'));
+        $this->assertSame('content-one', data_get($first->fresh()->design, 'elements.2.id'));
+        $this->assertSame('#123456', data_get($second->fresh()->design, 'elements.0.fill'));
+    }
+
+    public function test_slide_thumbnail_renders_its_real_content(): void
+    {
+        $user = User::factory()->create();
+        $presentation = Presentation::create(['user_id' => $user->id, 'title' => 'Miniaturas']);
+        $slide = Slide::create(['presentation_id' => $presentation->id, 'position' => 1, 'design' => ['elements' => [['id' => 'text', 'type' => 'text', 'text' => 'Vista pequeña', 'x' => 10, 'y' => 10, 'width' => 400, 'height' => 80]]]]);
+
+        $this->actingAs($user)->get('/diapositivas/'.$slide->id.'/miniatura.svg')
+            ->assertOk()->assertHeader('Content-Type', 'image/svg+xml')->assertSee('Vista pequeña');
+    }
 }

@@ -22,9 +22,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/presentaciones/{presentation}/tema', [PresentationController::class, 'updateTheme'])->name('presentations.theme');
     Route::post('/presentaciones/{presentation}/diapositivas', [PresentationController::class, 'addSlide'])->name('slides.store');
     Route::put('/presentaciones/{presentation}/diapositivas/orden', [PresentationController::class, 'reorderSlides'])->name('slides.reorder');
+    Route::put('/presentaciones/{presentation}/fondos', [PresentationController::class, 'applyBackground'])->name('presentations.background');
     Route::put('/diapositivas/{slide}', [PresentationController::class, 'updateSlide'])->name('slides.update');
     Route::put('/diapositivas/{slide}/lienzo', [PresentationController::class, 'saveCanvas'])->name('slides.canvas');
     Route::get('/diapositivas/{slide}/lienzo', [PresentationController::class, 'loadCanvas'])->name('slides.canvas.load');
+    Route::get('/diapositivas/{slide}/miniatura.svg', [PresentationController::class, 'slideThumbnail'])->name('slides.thumbnail');
     Route::delete('/diapositivas/{slide}', [PresentationController::class, 'deleteSlide'])->name('slides.destroy');
     Route::post('/diapositivas/{slide}/actividades', [PresentationController::class, 'addActivity'])->name('activities.store');
     Route::put('/actividades/{activity}', [PresentationController::class, 'updateActivity'])->name('activities.update');

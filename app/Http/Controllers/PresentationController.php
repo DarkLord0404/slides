@@ -76,6 +76,16 @@ class PresentationController extends Controller
         return response()->json(['elements' => $elements]);
     }
 
+    public function slideThumbnail(Slide $slide)
+    {
+        $this->owned($slide->presentation);
+
+        return response()
+            ->view('slides.thumbnail', ['elements' => data_get($slide->design, 'elements', [])])
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Cache-Control', 'private, max-age=15');
+    }
+
     public function updatePresentation(Request $request, Presentation $presentation)
     {
         $this->owned($presentation);
@@ -244,6 +254,36 @@ class PresentationController extends Controller
         DB::transaction(function () use ($data, $presentation) {
             foreach ($data['slide_ids'] as $index => $slideId) {
                 $presentation->slides()->whereKey($slideId)->update(['position' => $index + 1]);
+            }
+        });
+
+        return response()->json(['saved' => true]);
+    }
+
+    public function applyBackground(Request $request, Presentation $presentation)
+    {
+        $this->owned($presentation);
+        $data = $request->validate([
+            'background_elements' => ['present', 'array', 'min:1', 'max:8'],
+            'background_elements.*.id' => ['required', 'string', 'regex:/^theme-/'],
+            'background_elements.*.type' => ['required', 'in:rect,ellipse'],
+            'background_elements.*.x' => ['required', 'numeric'],
+            'background_elements.*.y' => ['required', 'numeric'],
+            'background_elements.*.width' => ['required', 'numeric', 'min:1'],
+            'background_elements.*.height' => ['required', 'numeric', 'min:1'],
+            'background_elements.*.rotation' => ['nullable', 'numeric'],
+            'background_elements.*.fill' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'background_elements.*.strokeWidth' => ['nullable', 'numeric', 'min:0'],
+        ]);
+        DB::transaction(function () use ($presentation, $data) {
+            foreach ($presentation->slides as $slide) {
+                $content = collect(data_get($slide->design, 'elements', []))
+                    ->reject(fn ($element) => str_starts_with($element['id'] ?? '', 'theme-'));
+                $slide->update(['design' => [
+                    ...($slide->design ?? []),
+                    'background_color' => $data['background_elements'][0]['fill'],
+                    'elements' => collect($data['background_elements'])->concat($content)->values()->all(),
+                ]]);
             }
         });
 
