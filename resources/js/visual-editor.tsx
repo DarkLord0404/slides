@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Stage, Layer, Rect, Text, Image as KImage, Transformer } from 'react-konva';
+import '@fontsource-variable/montserrat/wght.css';
+import '@fontsource-variable/montserrat/wght-italic.css';
 import './visual-editor.css';
 import './visual-theme.css';
 import './visual-interactions.css';
@@ -52,6 +54,8 @@ function App() {
     const nodes = useRef<Record<string, any>>({});
     const slide = slides[active];
     const chosen = slide.elements.find(e => e.id === selected);
+    const background = slide.elements.find(e => e.id === 'theme-background');
+    const canvasBackground = background?.fill || data.theme_settings?.background_color || '#fffdf8';
 
     const update = (elements: CanvasElement[], remember = true) => {
         if (remember) setHistory(h => [...h.slice(-30), slide.elements]);
@@ -61,6 +65,35 @@ function App() {
     const change = (next: CanvasElement) => {
         update(slide.elements.map(item => item.id === next.id ? next : item));
         if (next.id === `legacy-title-${slide.id}`) setSlides(all => all.map((value, index) => index === active ? { ...value, title: next.text || '' } : value));
+    };
+    const toggleFontStyle = (style: 'bold' | 'italic') => {
+        if (!chosen || chosen.type !== 'text') return;
+        const styles = new Set((chosen.fontStyle || 'normal').split(' ').filter(value => value !== 'normal'));
+        styles.has(style) ? styles.delete(style) : styles.add(style);
+        change({ ...chosen, fontStyle: styles.size ? [...styles].join(' ') : 'normal' });
+    };
+    const changeFont = async (fontFamily: string) => {
+        if (!chosen || chosen.type !== 'text') return;
+        change({ ...chosen, fontFamily });
+        await document.fonts.load(`16px "${fontFamily}"`);
+        setSlides(all => [...all]);
+    };
+    const pickScreenColor = async (apply: (color: string) => void) => {
+        if (!('EyeDropper' in window)) {
+            setStatus('Tu navegador no admite el cuentagotas');
+            return;
+        }
+        try {
+            const result = await new (window as any).EyeDropper().open();
+            apply(result.sRGBHex);
+        } catch { /* The user cancelled the picker. */ }
+    };
+    const changeBackground = (color: string) => {
+        if (background) {
+            change({ ...background, fill: color });
+            return;
+        }
+        update([{ id: 'theme-background', type: 'rect', x: 0, y: 0, width: 1280, height: 720, rotation: 0, fill: color }, ...slide.elements]);
     };
 
     const persistSlide = (target: Slide) => fetch(target.save_url, {
@@ -144,12 +177,14 @@ function App() {
         <aside>
             <section><h3>Agregar</h3><div className="tool-grid"><button onClick={addText}>A Texto</button><button onClick={addRect}>□ Forma</button><label>▧ Imagen<input type="file" accept="image/*" onChange={e => e.target.files?.[0] && addImage(e.target.files[0])} /></label></div></section>
             <section><h3>Propiedades</h3>{chosen?.type === 'text' ? <div className="properties">
-                <label>Fuente<select value={chosen.fontFamily || 'Arial'} onChange={e => change({ ...chosen, fontFamily: e.target.value })}><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Times New Roman</option><option>Courier New</option></select></label>
+                <label>Fuente<select value={chosen.fontFamily || 'Arial'} onChange={e => changeFont(e.target.value)}><option value="Montserrat Variable">Montserrat</option><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Times New Roman</option><option>Courier New</option></select></label>
                 <label>Tamaño de letra<input type="number" min="10" max="180" value={chosen.fontSize || 40} onChange={e => change({ ...chosen, fontSize: Number(e.target.value) })} /></label>
-                <label>Color<input type="color" value={chosen.fill || '#102a2e'} onChange={e => change({ ...chosen, fill: e.target.value })} /></label>
-                <button onClick={() => change({ ...chosen, fontStyle: chosen.fontStyle === 'bold' ? 'normal' : 'bold' })}>Negrita</button>
+                <label>Color de letra<div className="color-control"><input type="color" value={chosen.fill || '#102a2e'} onChange={e => change({ ...chosen, fill: e.target.value })} /><input aria-label="Código de color" value={chosen.fill || '#102a2e'} onChange={e => /^#[0-9a-f]{6}$/i.test(e.target.value) && change({ ...chosen, fill: e.target.value })} /><button title="Tomar color de la pantalla" onClick={() => pickScreenColor(color => change({ ...chosen, fill: color }))}>⌾</button></div></label>
+                <button className={(chosen.fontStyle || '').includes('bold') ? 'active' : ''} onClick={() => toggleFontStyle('bold')}><b>B</b> Negrita</button>
+                <button className={(chosen.fontStyle || '').includes('italic') ? 'active' : ''} onClick={() => toggleFontStyle('italic')}><i>I</i> Cursiva</button>
                 <p className="hint">El marco cambia el espacio del texto; el tamaño de letra solo cambia aquí.</p>
             </div> : chosen ? <div className="properties"><label>Color<input type="color" value={chosen.fill || '#ff6846'} onChange={e => change({ ...chosen, fill: e.target.value })} /></label></div> : <p className="hint">Selecciona un objeto para modificarlo.</p>}</section>
+            <section><h3>Fondo de la diapositiva</h3><div className="color-control"><input type="color" value={canvasBackground} onChange={e => changeBackground(e.target.value)} /><input aria-label="Código del fondo" value={canvasBackground} onChange={e => /^#[0-9a-f]{6}$/i.test(e.target.value) && changeBackground(e.target.value)} /><button title="Tomar color de la pantalla" onClick={() => pickScreenColor(changeBackground)}>⌾</button></div><p className="hint">Usa el cuentagotas para copiar cualquier color visible en la pantalla.</p></section>
             {chosen && !chosen.id.startsWith('theme-') && <section><h3>Orden de capas</h3><div className="layer-controls"><button onClick={() => moveLayer('back')}>⇤ Al fondo</button><button onClick={() => moveLayer('down')}>↓ Bajar</button><button onClick={() => moveLayer('up')}>↑ Subir</button><button onClick={() => moveLayer('front')}>⇥ Al frente</button></div><p className="hint">Los objetos que están más al frente cubren a los que están detrás.</p></section>}
             <section><h3>Interacciones de esta diapositiva</h3><div className="activity-list">{slide.activities.map(activity => <div key={activity.id}><b>{activity.question}</b><small>{activity.type.replace('_', ' ')}</small><form method="post" action={activity.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta interacción?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>Eliminar</button></form></div>)}</div>
                 {!interaction ? <div className="interaction-list"><button onClick={() => setInteraction('multiple_choice')}>Encuesta</button><button onClick={() => setInteraction('word_cloud')}>Nube de palabras</button><button onClick={() => setInteraction('open_text')}>Pregunta abierta</button><button onClick={() => setInteraction('true_false')}>Verdadero / falso</button></div> : <form className="new-activity" method="post" action={slide.activity_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="type" value={interaction} /><label>Pregunta<textarea name="question" maxLength={220} required autoFocus /></label>{interaction === 'multiple_choice' && <label>Opciones, una por línea<textarea name="options_text" maxLength={500} required /></label>}<div><button type="button" onClick={() => setInteraction('')}>Cancelar</button><button>Agregar</button></div></form>}
@@ -157,11 +192,11 @@ function App() {
             </section>
         </aside>
         <main><div className="ruler">Diapositiva {active + 1} · 1280 × 720</div><div className="canvas-shell">
-            <Stage width={960} height={540} scaleX={scale} scaleY={scale} onMouseDown={e => { if (e.target === e.target.getStage()) setSelected(null); }}><Layer><Rect width={1280} height={720} fill="#fffdf8" />
+            <Stage width={960} height={540} scaleX={scale} scaleY={scale} onMouseDown={e => { if (e.target === e.target.getStage()) setSelected(null); }}><Layer><Rect width={1280} height={720} fill={canvasBackground} />
                 {slide.elements.map(item => item.type === 'text' ? <React.Fragment key={item.id}>{selected === item.id && <Rect x={item.x} y={item.y} width={item.width} height={item.height} rotation={item.rotation} stroke="#007f7b" strokeWidth={2} dash={[8, 6]} listening={false} />}<Text ref={node => { nodes.current[item.id] = node; }} {...item} wrap="word" verticalAlign="top" opacity={editing === item.id ? 0 : 1} draggable onClick={() => setSelected(item.id)} onTap={() => setSelected(item.id)} onDblClick={() => beginEdit(item)} onDblTap={() => beginEdit(item)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: Math.max(80, item.width * sx), height: Math.max(item.fontSize || 20, item.height * sy), fontSize: item.fontSize }); }} /></React.Fragment> : item.type === 'rect' || item.type === 'ellipse' ? <Rect key={item.id} ref={node => { nodes.current[item.id] = node; }} {...item} fill={item.type === 'ellipse' ? 'transparent' : item.fill} stroke={item.type === 'ellipse' ? item.fill : undefined} strokeWidth={item.type === 'ellipse' ? item.strokeWidth || 30 : undefined} cornerRadius={item.type === 'ellipse' ? 999 : 0} draggable onClick={() => setSelected(item.id)} onTap={() => setSelected(item.id)} onDragEnd={e => change({ ...item, x: e.target.x(), y: e.target.y() })} onTransformEnd={e => { const node = e.target, sx = node.scaleX(), sy = node.scaleY(); node.scaleX(1); node.scaleY(1); change({ ...item, x: node.x(), y: node.y(), rotation: node.rotation(), width: node.width() * sx, height: node.height() * sy }); }} /> : <Picture key={item.id} nodeRef={(node: any) => nodes.current[item.id] = node} item={item} onSelect={() => setSelected(item.id)} onChange={change} />)}
                 <Transformer ref={transformer} rotateEnabled enabledAnchors={chosen?.type === 'text' ? ['top-left', 'top-right', 'middle-left', 'middle-right', 'bottom-left', 'bottom-right'] : undefined} boundBoxFunc={(_, box) => box.width < 30 || box.height < 20 ? _ : box} />
             </Layer></Stage>
-            {editing && chosen?.type === 'text' && <textarea autoFocus className="inline-editor" style={{ left: chosen.x * scale, top: chosen.y * scale, width: chosen.width * scale, height: chosen.height * scale, fontSize: (chosen.fontSize || 40) * scale, fontFamily: chosen.fontFamily, color: chosen.fill, fontWeight: chosen.fontStyle === 'bold' ? 700 : 400, transform: `rotate(${chosen.rotation}deg)` }} value={draft} onChange={e => setDraft(e.target.value)} onBlur={finishEdit} onKeyDown={e => { if (e.key === 'Escape') setEditing(null); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finishEdit(); }} />}
+            {editing && chosen?.type === 'text' && <textarea autoFocus className="inline-editor" style={{ left: chosen.x * scale, top: chosen.y * scale, width: chosen.width * scale, height: chosen.height * scale, fontSize: (chosen.fontSize || 40) * scale, fontFamily: chosen.fontFamily, color: chosen.fill, fontWeight: (chosen.fontStyle || '').includes('bold') ? 700 : 400, fontStyle: (chosen.fontStyle || '').includes('italic') ? 'italic' : 'normal', transform: `rotate(${chosen.rotation}deg)` }} value={draft} onChange={e => setDraft(e.target.value)} onBlur={finishEdit} onKeyDown={e => { if (e.key === 'Escape') setEditing(null); if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') finishEdit(); }} />}
         </div><small>Doble clic para escribir · el marco verde delimita el texto · Supr elimina</small></main>
         <nav><div className="pages-head"><h3>Páginas</h3><form method="post" action={data.slide_url}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="title" value="Nueva diapositiva" /><button title="Agregar diapositiva">＋</button></form></div><div className="filmstrip">{slides.map((item, index) => <div key={item.id} className={`page-item ${index === active ? 'active' : ''}`}><button className="page-preview" onClick={() => selectSlide(index)}><span>{index + 1}</span><div>{item.title || 'Sin título'}</div></button><div className="page-actions"><button onClick={() => moveSlide(index, -1)} disabled={index === 0}>↑</button><button onClick={() => moveSlide(index, 1)} disabled={index === slides.length - 1}>↓</button>{slides.length > 1 && <form method="post" action={item.delete_url} onSubmit={event => { if (!confirm('¿Eliminar esta diapositiva?')) event.preventDefault(); }}><input type="hidden" name="_token" value={data.csrf} /><input type="hidden" name="_method" value="DELETE" /><button>×</button></form>}</div></div>)}</div></nav>
     </div>;
