@@ -34,7 +34,7 @@ class PresentationController extends Controller
     public function edit(Presentation $presentation)
     {
         $this->owned($presentation);
-        $presentation->load('slides.activities');
+        $this->loadEditorSlides($presentation);
 
         return view('presentations.visual-editor', compact('presentation'));
     }
@@ -42,9 +42,25 @@ class PresentationController extends Controller
     public function visualEditor(Presentation $presentation)
     {
         $this->owned($presentation);
-        $presentation->load('slides.activities');
+        $this->loadEditorSlides($presentation);
 
         return view('presentations.visual-editor', compact('presentation'));
+    }
+
+    private function loadEditorSlides(Presentation $presentation): void
+    {
+        $slides = $presentation->slides()
+            ->select(['id', 'presentation_id', 'position', 'title', 'body'])
+            ->with('activities')
+            ->orderBy('position')
+            ->get();
+        $requestedId = request()->integer('slide');
+        $activeId = $requestedId ?: $slides->first()?->id;
+        if ($activeId) {
+            $activeSlide = $presentation->slides()->with('activities')->findOrFail($activeId);
+            $slides = $slides->map(fn ($slide) => $slide->id === $activeSlide->id ? $activeSlide : $slide);
+        }
+        $presentation->setRelation('slides', $slides);
     }
 
     public function saveCanvas(Request $request, Slide $slide)

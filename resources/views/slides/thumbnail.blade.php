@@ -7,7 +7,7 @@
 @elseif(($element['type'] ?? '') === 'image' && !empty($element['src']))
 <image href="{{ $element['src'] }}" x="{{ $element['x'] ?? 0 }}" y="{{ $element['y'] ?? 0 }}" width="{{ $element['width'] ?? 0 }}" height="{{ $element['height'] ?? 0 }}" preserveAspectRatio="xMidYMid slice"/>
 @elseif(($element['type'] ?? '') === 'text')
-<foreignObject x="{{ $element['x'] ?? 0 }}" y="{{ $element['y'] ?? 0 }}" width="{{ $element['width'] ?? 100 }}" height="{{ $element['height'] ?? 50 }}"><div xmlns="http://www.w3.org/1999/xhtml" style="color:{{ $element['fill'] ?? '#102a2e' }};font:{{ str_contains($element['fontStyle'] ?? '', 'italic') ? 'italic' : 'normal' }} {{ str_contains($element['fontStyle'] ?? '', 'bold') ? '700' : '400' }} {{ $element['fontSize'] ?? 40 }}px/{{ 1.15 }} '{{ $element['fontFamily'] ?? 'Arial' }}';white-space:pre-wrap;overflow:hidden">{{ $element['text'] ?? '' }}</div></foreignObject>
+<foreignObject x="{{ $element['x'] ?? 0 }}" y="{{ $element['y'] ?? 0 }}" width="{{ $element['width'] ?? 100 }}" height="{{ $element['height'] ?? 50 }}"><div xmlns="http://www.w3.org/1999/xhtml" style="color:{{ $element['fill'] ?? '#102a2e' }};font:{{ str_contains($element['fontStyle'] ?? '', 'italic') ? 'italic' : 'normal' }} {{ str_contains($element['fontStyle'] ?? '', 'bold') ? '700' : '400' }} {{ $element['fontSize'] ?? 40 }}px/{{ 1.15 }} '{{ $element['fontFamily'] ?? 'Arial' }}';text-align:{{ $element['align'] ?? 'left' }};white-space:pre-wrap;overflow:hidden">{{ $element['text'] ?? '' }}</div></foreignObject>
 @endif
 @endforeach
 </svg>
