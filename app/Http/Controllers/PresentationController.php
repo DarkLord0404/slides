@@ -84,6 +84,13 @@ class PresentationController extends Controller
         return back()->with('ok', 'Información de la presentación actualizada.');
     }
 
+    public function themeSettings(Presentation $presentation)
+    {
+        $this->owned($presentation);
+
+        return redirect()->route('presentations.edit', $presentation);
+    }
+
     public function addSlide(Request $request, Presentation $presentation)
     {
         $this->owned($presentation);

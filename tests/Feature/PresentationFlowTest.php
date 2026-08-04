@@ -278,4 +278,15 @@ class PresentationFlowTest extends TestCase
         $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn ($element) => $element['id'] === 'theme-background'));
         $this->assertTrue(collect($slide->fresh()->design['elements'])->contains(fn ($element) => $element['id'] === 'theme-ring-1'));
     }
+
+    public function test_opening_theme_url_redirects_to_the_editor(): void
+    {
+        $user = User::factory()->create();
+        $presentation = Presentation::create(['user_id' => $user->id, 'title' => 'Tema seguro']);
+
+        $this->actingAs($user)->get('/presentaciones/'.$presentation->id.'/tema')
+            ->assertRedirect('/presentaciones/'.$presentation->id.'/editar');
+        $this->actingAs(User::factory()->create())->get('/presentaciones/'.$presentation->id.'/tema')
+            ->assertForbidden();
+    }
 }
